@@ -2,13 +2,17 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 
 import "../interfaces/IFantomMintAddressProvider.sol";
 import "../interfaces/IFantomDeFiTokenStorage.sol";
+import "../modules/FantomMintBalanceGuard.sol";
+import "./FantomAuctionManager.sol";
+
 
 // FantomLiquidationManager implements the liquidation model
 // with the ability to fine tune settings by the contract owner.
-contract FantomLiquidationManager is Initializable, Ownable
+contract FantomLiquidationManager is Initializable, Ownable, FantomMintBalanceGuard
 {
     // define used libs
     using SafeMath for uint256;
@@ -32,6 +36,12 @@ contract FantomLiquidationManager is Initializable, Ownable
     uint256 public targetAmt;
 
     uint256 constant WAD = 10 ** 18;
+
+    struct VaultData {
+        // todo: need to define  // IE 2021-07-08
+        uint256 amount;
+        address targetAddress;
+    }
 
     // initialize initializes the contract properly before the first use.
     function initialize(address owner, address _addressProvider) public initializer {
@@ -72,24 +82,24 @@ contract FantomLiquidationManager is Initializable, Ownable
 
     // rewardIsEligible checks if the account is eligible to receive any reward.
     function collateralIsEligible(address _account, address _token) public view returns (bool) {
-        return addressProvider.getFantomMint().collateralCanDecrease(_account, _token, _amount, 0, getCollateralLowestDebtRatio4dec());
+        return addressProvider.getFantomMint().collateralCanDecrease(_account, _token, 0);
     }
 
     function startLiquidation(address targetAddress, address _token) external returns (uint256 id) {
         require(live == 1, "Liquidation not live");
 
-        require(!collateralIsEligible(targetAddress, _token, 0), "Collateral is not eligible for liquidation");
+        require(!collateralIsEligible(targetAddress, _token), "Collateral is not eligible for liquidation");
 
         require(getCollateralPool().totalOf(targetAddress) > 0, "Collateral is not eligible for liquidation");
 
         // get the collateral pool
         IFantomDeFiTokenStorage pool = IFantomDeFiTokenStorage(getCollateralPool());
         
-        for (uint i = 0; i < getCollateralPool().tokens.length; i++) {
-            uint256 collatBalance = getCollateralPool().balanceOf(targetAddress, getCollateralPool().tokens[i]);
-            liquidatedVault[targetAddress][getCollateralPool().tokens[i]] = liquidatedVault[targetAddress][getCollateralPool().tokens[i]] + collatBalance;
+        for (uint i = 0; i < getCollateralPool().getTokens().length; i++) {
+            uint256 collatBalance = getCollateralPool().balanceOf(targetAddress, getCollateralPool().getTokens()[i]);
+            liquidatedVault[targetAddress][getCollateralPool().getTokens()[i]] = liquidatedVault[targetAddress][getCollateralPool().getTokens()[i]] + collatBalance;
             
-            pool.sub(targetAddress, getCollateralPool().tokens[i], collatBalance);
+            pool.sub(targetAddress, getCollateralPool().getTokens()[i], collatBalance);
         }
 
         bool found = false;
@@ -107,7 +117,7 @@ contract FantomLiquidationManager is Initializable, Ownable
             collateralAddresses.push(targetAddress);
         }
 
-        FantomAuctionManager(auctionAddress).startAuction(liquidatedVault[targetAddress]);
+        FantomAuctionManager(auctionAddress).startAuction(targetAddress, _token);
     }
 
     function endLiquidation() external auth {
