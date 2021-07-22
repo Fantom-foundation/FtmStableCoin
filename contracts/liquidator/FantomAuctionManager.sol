@@ -2,9 +2,11 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 
 import "../interfaces/IFantomMintAddressProvider.sol";
 import "../interfaces/IFantomDeFiTokenStorage.sol";
+import "../modules/FantomMintBalanceGuard.sol";
 
 // FantomAuctionManager implements the liquidation model
 // with the ability to fine tune settings by the contract owner.
@@ -25,6 +27,8 @@ contract FantomAuctionManager is Initializable, Ownable
 
     uint256 constant WAD = 10 ** 18;
 
+    uint256 live;
+
     // initialize initializes the contract properly before the first use.
     function initialize(address owner, address _addressProvider, address _liquidatedAddress) public initializer {
         // initialize the Ownable
@@ -36,6 +40,7 @@ contract FantomAuctionManager is Initializable, Ownable
         // initialize default values
         admins[owner] = 1;
         liquidatedAddress = _liquidatedAddress;
+        live = 1;
     }
 
     function addAdmin(address usr) external onlyOwner {
@@ -63,13 +68,13 @@ contract FantomAuctionManager is Initializable, Ownable
 
     // rewardIsEligible checks if the account is eligible to receive any reward.
     function collateralIsEligible(address _account, address _token) public view returns (bool) {
-        return addressProvider.getFantomMint().collateralCanDecrease(_account, _token, _amount, 0, getCollateralLowestDebtRatio4dec());
+        return addressProvider.getFantomMint().collateralCanDecrease(_account, _token, 0);
     }
 
-    function startAuction() external returns (uint256 id) {
+    function startAuction(address targetAddress, address _token) external returns (uint256 id) {
         require(live == 1, "Liquidation not live");
 
-        require(!collateralIsEligible(targetAddress, _token, 0), "Collateral is not eligible for liquidation");
+        require(!collateralIsEligible(targetAddress, _token), "Collateral is not eligible for liquidation");
 
         require(getCollateralPool().totalOf(targetAddress) > 0, "Collateral is not eligible for liquidation");
 
