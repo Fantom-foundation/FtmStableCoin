@@ -117,7 +117,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintBalanceGu
         return addressProvider.getFantomMint().collateralCanDecrease(_account, _token, 0);
     }
 
-    function getLiquidationList() external view returns (address[]) {
+    function getLiquidationList() external view returns (address[] memory) {
         return collateralOwners;
     }
 
