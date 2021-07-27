@@ -22,8 +22,6 @@
   "homepage": "https://github.com/Fantom-foundation/Fantom-FMint#readme",
   "dependencies": {
     "@openzeppelin/contracts-ethereum-package": "^2.5.0",
-    "@openzeppelin/test-helpers": "^0.5.12",
-    "@openzeppelin/upgrades": "^2.8.0",
-    "chai": "^4.3.4"
+    "@openzeppelin/upgrades": "^2.8.0"
   }
 }
