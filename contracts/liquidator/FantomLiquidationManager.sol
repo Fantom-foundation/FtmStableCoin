@@ -126,7 +126,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintBalanceGu
         return (
             _auction.startTime,
             _auction.endTime,
-            _auction.currentPrice,
+            _auction.currentPrice
         );
     }
 
