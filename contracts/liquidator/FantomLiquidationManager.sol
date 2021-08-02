@@ -12,7 +12,7 @@ import "./FantomAuctionManager.sol";
 
 // FantomLiquidationManager implements the liquidation model
 // with the ability to fine tune settings by the contract owner.
-contract FantomLiquidationManager is Initializable, Ownable, FantomMintBalanceGuard
+contract FantomLiquidationManager is Initializable, Ownable//, FantomMintBalanceGuard
 {
     // define used libs
     using SafeMath for uint256;
