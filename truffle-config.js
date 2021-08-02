@@ -12,14 +12,19 @@ module.exports = {
     },
     networks: {
         ganache: {
-        host: "127.0.0.1",
-        port: 7545,
-        network_id: "*"
+          host: "127.0.0.1",
+          port: 7545,
+          network_id: "*"
         },
         development: {
-            host: "operavm",
-            port: 7545,
-            network_id: "4002"
+          host: "operavm",
+          port: 7545,
+          network_id: "4002"
+        },
+        fork: {
+          host: "127.0.0.1",
+          port: 8545,
+          network_id: "*"
         },
         test: {
             provider: () => new HDWalletProvider(mnemonic, `https://rpc.testnet.fantom.network`),
