@@ -29,5 +29,7 @@ interface IFantomDeFiTokenStorage {
     // sub removes specified amount of tokens from given account.
     function sub(address _account, address _token, uint256 _amount) external;
 
-    function getTokens() external view returns(address[] memory);
+    function tokens() external view returns (address[] memory);
+
+    function tokensCount() external view returns (uint256);
 }
