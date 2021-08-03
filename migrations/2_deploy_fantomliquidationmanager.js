@@ -22,4 +22,4 @@ module.exports = async function(deployer) {
     const fantomLiquidationManager = await FantomLiquidationManager.deployed();
 
     await fantomLiquidationManager.initialize(owner, addressProvider);
-}
+} 
