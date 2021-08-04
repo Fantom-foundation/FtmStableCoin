@@ -264,9 +264,9 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         // get the collateral pool
         IFantomDeFiTokenStorage pool = getCollateralPool();
 
-        require(!collateralIsEligible(targetAddress, _token), "Collateral is not eligible for liquidation");
+        require(!collateralIsEligible(targetAddress, _token), "Collateral is still eligible for rewards");
 
-        require(pool.totalOf(targetAddress) > 0, "Collateral is not eligible for liquidation");
+        require(pool.totalOf(targetAddress) > 0, "The value of the balance is 0");
 
 
         addressProvider.getRewardDistribution().rewardUpdate(targetAddress);
@@ -317,5 +317,9 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
     function endLiquidation() external auth {
         live = 0;
+    }
+
+    function allowToStartLiquidation() external auth {
+        live = 1;        
     }
 }
