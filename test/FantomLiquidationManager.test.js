@@ -64,6 +64,8 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         })
 
         it('starts liquidation', async function() {
+            const live = await this.fantomLiquidationManager.live();
+            console.log(live);
             //await this.fantomLiquidationManager.startLiquidation(account, wFTM, {from: admin});
         })
     })

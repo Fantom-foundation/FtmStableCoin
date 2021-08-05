@@ -143,25 +143,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         require(admins[msg.sender] == 1, "Sender not authorized");
         _;
     }
-
-    // getCollateralPoolAddress returns the address of collateral pool.
     
-    // note from Iwan Effendi
-    // the liquidation bot fails when calling getCollateralPool but is ok when calling getCollateralPoolAddress
-    // thus I created this function
-    function getCollateralPoolAddress() public view returns(address) {
-        IFantomDeFiTokenStorage fantomDeFiTokenStorage = addressProvider.getCollateralPool();
-        return address(fantomDeFiTokenStorage);
-    }
-
-    // note from Iwan Effendi
-    // the liquidation bot fails when calling getDebtPool but is ok when calling getDebtPoolAddress
-    // thus I created this function
-    function getDebtPoolAddress() public view returns(address) {
-        IFantomDeFiTokenStorage fantomDeFiTokenStorage = addressProvider.getDebtPool();
-        return address(fantomDeFiTokenStorage);
-    }
-
     // getCollateralPool returns the address of collateral pool.
     function getCollateralPool() public view returns (IFantomDeFiTokenStorage) {
         return addressProvider.getCollateralPool();
