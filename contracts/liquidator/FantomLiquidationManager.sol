@@ -318,9 +318,5 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
     function updateLiquidationFlag(bool _live) external auth {
         live = _live;
-    }
-
-    function allowToStartLiquidation() external auth {
-        live = 1;        
-    }
+    }    
 }
