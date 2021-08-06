@@ -11,11 +11,18 @@ const { expect } = require('chai')
 
 const FantomLiquidationManager = artifacts.require('FantomLiquidationManager');
 const IFantomMintTokenRegistry = artifacts.require('IFantomMintTokenRegistry');
+const IFantomDeFiTokenStorage = artifacts.require('IFantomDeFiTokenStorage');
 
 const fantomMintTokenRegistryAddress = '0x5AC50E414bB625Ce7dC17aD165A604bf3cA8FD23';
 
 const addressProvider = '0xcb20a1A22976764b882C2f03f0C8523F3df54b10';
 const wFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
+
+const weiToEther = (n) => {
+    return web3.utils.fromWei(n.toString(), 'ether');
+}
+
+const collateralPoolAddress = '0xC25012DadAd30c53290e1d77c48308cafA150A81';
 
 
 contract('Unit Test for FantomLiquidationManager', function ([owner, admin, account]) {
@@ -25,6 +32,8 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         await this.fantomLiquidationManager.initialize(owner, addressProvider)
         
         this.fantomMintTokenRegistry = await IFantomMintTokenRegistry.at(fantomMintTokenRegistryAddress);
+        this.collateralPool = await IFantomDeFiTokenStorage.at(collateralPoolAddress);
+        //console.log(this.collateralPool);
     })
 
     describe('view functions', function () {
@@ -42,9 +51,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         })
 
         it('checks if the collateral of an account is eligible for rewards', async function() {
-            const isEligible = await this.fantomLiquidationManager.collateralIsEligible(account, wFTM );
-            console.log(isEligible);
-            expect(isEligible).to.be.equal(true);
+            //const isEligible = await this.fantomLiquidationManager.collateralIsEligible(account);
+            //console.log(isEligible);
+            //expect(isEligible).to.be.equal(true);
         })
 
     })
@@ -53,9 +62,20 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         
         beforeEach(async function () {
             await this.fantomLiquidationManager.addAdmin(admin, {from:owner});
-            console.log(this.fantomMintTokenRegistry);
+            //console.log(this.fantomMintTokenRegistry);
 
         })
+
+        it('gets tokens count', async function() {
+            const tokensCount = await this.fantomLiquidationManager.tokensCount();
+            console.log(tokensCount.toString());
+        })
+
+        it('gets tokens', async function() {
+            //const token = await this.fantomLiquidationManager.getTokens(0);
+            const token = await this.collateralPool.tokens(0);
+            console.log(token);
+        })        
 
         it('can deposit wFTM', async function() {
             const canDeposit = await this.fantomMintTokenRegistry.canDeposit(wFTM);
@@ -65,7 +85,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
 
         it('starts liquidation', async function() {
             const live = await this.fantomLiquidationManager.live();
-            console.log(live);
+            console.log(live.toString());
             //await this.fantomLiquidationManager.startLiquidation(account, wFTM, {from: admin});
         })
     })

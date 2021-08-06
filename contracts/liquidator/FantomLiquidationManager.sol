@@ -144,6 +144,16 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         _;
     }
     
+    // function get a tokens
+    function getToken(uint256 index) public view returns (address){
+        return addressProvider.getCollateralPool().tokens(index);
+    }
+
+    // token counts
+    function tokensCount() public view returns(uint256) {
+        return addressProvider.getCollateralPool().tokensCount();
+    }
+ 
     // getCollateralPool returns the address of collateral pool.
     function getCollateralPool() public view returns (IFantomDeFiTokenStorage) {
         return addressProvider.getCollateralPool();
@@ -156,7 +166,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
     // rewardIsEligible checks if the account is eligible to receive any reward.
     function collateralIsEligible(address _account) public view returns (bool) {
-        return FantomMint(addressProvider.getAddress(MOD_FANTOM_MINT)).checkCollateralCanDecrease(_account, getCollateralPool().tokens()[0], 0);
+        return FantomMint(addressProvider.getAddress(MOD_FANTOM_MINT)).checkCollateralCanDecrease(_account, getCollateralPool().tokens(0), 0);
     }
 
     function getLiquidationList() external view returns (address[] memory) {
@@ -196,7 +206,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         
         uint totalValue = 0;
         for (uint i = 0; i < pool.tokensCount(); i++) {
-            totalValue += liquidatedVault[_collateralOwner][pool.tokens()[i]];
+            totalValue += liquidatedVault[_collateralOwner][pool.tokens(i)];
         }
 
         return totalValue;
@@ -246,7 +256,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         // Check if auction is finished or not
         bool auctionEnded = false;
 
-        if (liquidatedVault[_collateralOwner] == 0) {
+        if (liquidatedVault[_collateralOwner][_token] == 0) {
             auctionEnded = balanceOfRemainingCollateral(_collateralOwner) > 0;
         }
 
@@ -265,12 +275,15 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
     }
 
     function getAuctionResource(address _collateralOwner) public returns (address[] memory, uint256[] memory) {
-        uint256[] memory amounts = new uint256[](getCollateralPool().tokensCount());
+        uint256 count = getCollateralPool().tokensCount();
+        uint256[] memory amounts = new uint256[](count);        
+        address[] memory tokens = new address[](count);
         for (uint i = 0; i < getCollateralPool().tokensCount(); i++) {
-            address _token = getCollateralPool().tokens()[i];
+            address _token = getCollateralPool().tokens(i);
             amounts[i] = liquidatedVault[_collateralOwner][_token];
+            tokens[i] = _token;
         }
-        return (getCollateralPool().tokens(), amounts);
+        return (tokens, amounts);
     }
 
     function startLiquidation(address targetAddress) external auth {
@@ -286,9 +299,9 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         addressProvider.getRewardDistribution().rewardUpdate(targetAddress);
         
         for (uint i = 0; i < pool.tokensCount(); i++) {
-            uint256 collatBalance = pool.balanceOf(targetAddress, pool.tokens()[i]);
-            liquidatedVault[targetAddress][pool.tokens()[i]] += collatBalance;
-            pool.sub(targetAddress, pool.tokens()[i], collatBalance);
+            uint256 collatBalance = pool.balanceOf(targetAddress, pool.tokens(i));
+            liquidatedVault[targetAddress][pool.tokens(i)] += collatBalance;
+            pool.sub(targetAddress, pool.tokens(i), collatBalance);
         }
 
         if (auctionIndex[targetAddress] == 0) {
@@ -316,7 +329,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         emit AuctionStarted(_collateralOwner);
     }
 
-    function updateLiquidationFlag(bool _live) external auth {
+    function updateLiquidationFlag(uint256 _live) external auth {
         live = _live;
     }    
 }
