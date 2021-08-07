@@ -144,7 +144,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         _;
     }
     
-    // function get a tokens
+    /* // function get a tokens
     function getToken(uint256 index) public view returns (address){
         return addressProvider.getCollateralPool().tokens(index);
     }
@@ -153,7 +153,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
     function tokensCount() public view returns(uint256) {
         return addressProvider.getCollateralPool().tokensCount();
     }
- 
+  */
     // getCollateralPool returns the address of collateral pool.
     function getCollateralPool() public view returns (IFantomDeFiTokenStorage) {
         return addressProvider.getCollateralPool();
