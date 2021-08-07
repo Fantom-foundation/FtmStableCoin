@@ -51,9 +51,15 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         })
 
         it('checks if the collateral of an account is eligible for rewards', async function() {
-            //const isEligible = await this.fantomLiquidationManager.collateralIsEligible(account);
-            //console.log(isEligible);
-            //expect(isEligible).to.be.equal(true);
+            const isEligible = await this.fantomLiquidationManager.collateralIsEligible(account);
+            console.log(isEligible);
+            expect(isEligible).to.be.equal(true);
+        })
+
+        it('gets the live status', async function () {
+            const live = await this.fantomLiquidationManager.live();
+            console.log(live.toString());
+            expect(live).to.be.equal(true);
         })
 
     })
@@ -83,10 +89,8 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             expect(canDeposit).to.be.equal(true);
         })
 
-        it('starts liquidation', async function() {
-            const live = await this.fantomLiquidationManager.live();
-            console.log(live.toString());
-            //await this.fantomLiquidationManager.startLiquidation(account, wFTM, {from: admin});
+        it('starts liquidation', async function() {            
+            //await this.fantomLiquidationManager.startLiquidation(account, {from: admin});
         })
     })
 })
