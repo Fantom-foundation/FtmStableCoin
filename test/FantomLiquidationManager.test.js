@@ -73,12 +73,11 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         })
 
         it('gets tokens count', async function() {
-            const tokensCount = await this.fantomLiquidationManager.tokensCount();
+            const tokensCount = await this.collateralPool.tokensCount();
             console.log(tokensCount.toString());
         })
 
         it('gets tokens', async function() {
-            //const token = await this.fantomLiquidationManager.getTokens(0);
             const token = await this.collateralPool.tokens(0);
             console.log(token);
         })        
