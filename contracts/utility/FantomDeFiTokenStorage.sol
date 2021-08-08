@@ -218,4 +218,9 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     function tokensCount() public view returns (uint256) {
         return tokens.length;
     }
+
+    function getTokens() public view returns(address[] memory){
+        return tokens;
+    }
+     
 }

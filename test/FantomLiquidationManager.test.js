@@ -10,56 +10,84 @@ const { expect } = require('chai')
 
 
 const FantomLiquidationManager = artifacts.require('FantomLiquidationManager');
-const IFantomMintTokenRegistry = artifacts.require('IFantomMintTokenRegistry');
-const IFantomDeFiTokenStorage = artifacts.require('IFantomDeFiTokenStorage');
+const FantomMintTokenRegistry = artifacts.require('FantomMintTokenRegistry');
+const FantomDeFiTokenStorage = artifacts.require('FantomDeFiTokenStorage');
+const FantomMint = artifacts.require('FantomMint');
+const FantomMintAddressProvider = artifacts.require('FantomMintAddressProvider');
 
-const fantomMintTokenRegistryAddress = '0x5AC50E414bB625Ce7dC17aD165A604bf3cA8FD23';
-
-const addressProvider = '0xcb20a1A22976764b882C2f03f0C8523F3df54b10';
 const wFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
 
 const weiToEther = (n) => {
     return web3.utils.fromWei(n.toString(), 'ether');
 }
 
-const collateralPoolAddress = '0xC25012DadAd30c53290e1d77c48308cafA150A81';
-
 
 contract('Unit Test for FantomLiquidationManager', function ([owner, admin, account]) {
 
     beforeEach(async function () {
-        this.fantomLiquidationManager = await FantomLiquidationManager.new ({from:owner})
-        await this.fantomLiquidationManager.initialize(owner, addressProvider)
+        this.fantomMintAddressProvider = await FantomMintAddressProvider.new({from:owner});
+        await this.fantomMintAddressProvider.initialize(owner);
+
+        this.fantomLiquidationManager = await FantomLiquidationManager.new({from:owner})
+        await this.fantomLiquidationManager.initialize(owner, this.fantomMintAddressProvider.address);
         
-        this.fantomMintTokenRegistry = await IFantomMintTokenRegistry.at(fantomMintTokenRegistryAddress);
-        this.collateralPool = await IFantomDeFiTokenStorage.at(collateralPoolAddress);
-        //console.log(this.collateralPool);
+        this.fantomMint = await FantomMint.new({form: owner});
+        await this.fantomMint.initialize(owner, this.fantomMintAddressProvider.address);
+
+        this.fantomMintTokenRegistry = await FantomMintTokenRegistry.new();
+        await this.fantomMintTokenRegistry.initialize(owner);
+
+        this.collateralPool = await FantomDeFiTokenStorage.new({from: owner});
+        await this.collateralPool.initialize(this.fantomMintAddressProvider.address, true);
+        
+        this.debtPool = await FantomDeFiTokenStorage.new({from: owner});
+        await this.debtPool.initialize(this.fantomMintAddressProvider.address, true);   
+        
+        await this.fantomMintAddressProvider.setFantomMint(this.fantomMint.address, {from: owner});
+        await this.fantomMintAddressProvider.setCollateralPool(this.collateralPool.address, {from: owner});
+        await this.fantomMintAddressProvider.setDebtPool(this.debtPool.address, {from: owner});
     })
 
     describe('view functions', function () {
+
+        it('gets a token', async function() {
+            //const token = await this.collateralPool.tokens(0);
+            //console.log(token);
+        })
+
+        it('gets all tokens', async function() {
+            const tokens = await this.collateralPool.getTokens();
+            console.log(tokens);
+        })
+
+        it('gets the tokens count', async function() {
+            const tokensCount = await this.collateralPool.tokensCount();
+            console.log(tokensCount.toString());
+        })
+
         it('gets collateral pool', async function() {
             const collateralPool = await this.fantomLiquidationManager.getCollateralPool();
-            console.log(collateralPool);
-            expect(collateralPool).to.be.equal('0xC25012DadAd30c53290e1d77c48308cafA150A81');
+            //console.log(collateralPool);
+            expect(collateralPool).to.be.equal(this.collateralPool.address);
         })
 
         it('gets debt pool', async function() {
             const debtPool = await this.fantomLiquidationManager.getDebtPool();
-            console.log(debtPool);
-            expect(debtPool).to.be.equal('0x246d1C179415547f43Bd4f8feF847d953c379650');
+            //console.log(debtPool);
+            expect(debtPool).to.be.equal(this.debtPool.address);
 
         })
 
         it('checks if the collateral of an account is eligible for rewards', async function() {
-            const isEligible = await this.fantomLiquidationManager.collateralIsEligible(account);
-            console.log(isEligible);
-            expect(isEligible).to.be.equal(true);
+            //const isEligible = await this.fantomLiquidationManager.collateralIsEligible(account);
+            //console.log('isEligible: ', isEligible);
+            //expect(isEligible).to.be.equal(true);
         })
 
         it('gets the live status', async function () {
-            const live = await this.fantomLiquidationManager.live();
-            console.log(live.toString());
-            expect(live).to.be.equal(true);
+            /* const live = await this.fantomLiquidationManager.live();
+            console.log('live status: ', live.toString());
+            expect(live).to.be.equal(true); */
         })
 
     })
@@ -73,19 +101,23 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         })
 
         it('gets tokens count', async function() {
-            const tokensCount = await this.collateralPool.tokensCount();
-            console.log(tokensCount.toString());
+            /* const tokensCount = await this.collateralPool.tokensCount();
+            console.log(tokensCount.toString()); */
         })
 
         it('gets tokens', async function() {
-            const token = await this.collateralPool.tokens(0);
-            console.log(token);
+            /* const token = await this.collateralPool.tokens(0);
+            console.log('token: ', token);
+            console.log('account: ', account);
+            const debtValueOf = this.fantomMint.debtValueOf(account, token, 0);
+            console.log('debtValueOf: ', debtValueOf); */
+
         })        
 
         it('can deposit wFTM', async function() {
-            const canDeposit = await this.fantomMintTokenRegistry.canDeposit(wFTM);
+/*             const canDeposit = await this.fantomMintTokenRegistry.canDeposit(wFTM);
             console.log(canDeposit);
-            expect(canDeposit).to.be.equal(true);
+            expect(canDeposit).to.be.equal(true); */
         })
 
         it('starts liquidation', async function() {            

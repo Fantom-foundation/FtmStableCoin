@@ -76,12 +76,6 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
     uint256 constant WAD = 10 ** 18;
 
-    struct VaultData {
-        // todo: need to define  // IE 2021-07-08
-        uint256 amount;
-        address targetAddress;
-    }
-
     // initialize initializes the contract properly before the first use.
     function initialize(address owner, address _addressProvider) public initializer {
         // initialize the Ownable
@@ -143,17 +137,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         require(admins[msg.sender], "Sender not authorized");
         _;
     }
-    
-    /* // function get a tokens
-    function getToken(uint256 index) public view returns (address){
-        return addressProvider.getCollateralPool().tokens(index);
-    }
 
-    // token counts
-    function tokensCount() public view returns(uint256) {
-        return addressProvider.getCollateralPool().tokensCount();
-    }
-  */
     // getCollateralPool returns the address of collateral pool.
     function getCollateralPool() public view returns (IFantomDeFiTokenStorage) {
         return addressProvider.getCollateralPool();
@@ -275,15 +259,12 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
     }
 
     function getAuctionResource(address _collateralOwner) public returns (address[] memory, uint256[] memory) {
-        uint256 count = getCollateralPool().tokensCount();
-        uint256[] memory amounts = new uint256[](count);        
-        address[] memory tokens = new address[](count);
+        uint256[] memory amounts = new uint256[](getCollateralPool().tokensCount());
         for (uint i = 0; i < getCollateralPool().tokensCount(); i++) {
             address _token = getCollateralPool().tokens(i);
             amounts[i] = liquidatedVault[_collateralOwner][_token];
-            tokens[i] = _token;
         }
-        return (tokens, amounts);
+        return (getCollateralPool().getTokens(), amounts);
     }
 
     function startLiquidation(address targetAddress) external auth {
@@ -331,5 +312,5 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
     function updateLiquidationFlag(bool _live) external auth {
         live = _live;
-    }    
+    }
 }
