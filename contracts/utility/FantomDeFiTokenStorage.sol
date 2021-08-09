@@ -75,7 +75,7 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
 
         // get the token price and price digits correction
         // NOTE: We may want to cache price decimals to save some gas on subsequent calls.
-        uint256 price = addressProvider.getPriceOracleProxy().getPrice(_token);
+        uint256 price = addressProvider.getPriceOracleProxy().getPrice(_token);        
         uint256 priceDigitsCorrection = 10 ** uint256(addressProvider.getTokenRegistry().priceDecimals(_token));
 
         // calculate the value and adjust for the dust
@@ -128,6 +128,7 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     // _totalOf calculates the value of given account with specified token balance adjusted
     // either up, or down, based on given extra values
     function _totalOf(address _account, address _token, uint256 _add, uint256 _sub) internal view returns (uint256 value) {
+
         // loop all registered debt tokens
         for (uint i = 0; i < tokens.length; i++) {
             // advance the result by the value of current token balance of this token.
