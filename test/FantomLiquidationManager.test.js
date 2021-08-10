@@ -17,13 +17,16 @@ const FantomMintTokenRegistry = artifacts.require('FantomMintTokenRegistry');
 const FantomDeFiTokenStorage = artifacts.require('FantomDeFiTokenStorage');
 const FantomMint = artifacts.require('FantomMint');
 const FantomMintAddressProvider = artifacts.require('FantomMintAddressProvider');
+const TestToken = artifacts.require('TestToken');
+const TestPriceOracleProxy = artifacts.require('TestPriceOracleProxy');
 
 //const liveFantomMintAddressProviderAddress = "0xcb20a1A22976764b882C2f03f0C8523F3df54b10";
 //const IFantomMintAddressProvider = artifacts.require('IFantomMintAddressProvider');
 
-const livePriceOracleProxyAddress ="0x8173B69510bA3fDE9Dc945FB11F17c24042f63F4";
+//const livePriceOracleProxyAddress ="0x8173B69510bA3fDE9Dc945FB11F17c24042f63F4";
 
-const wFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
+//const wFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
+let wFTM;
 
 const weiToEther = (n) => {
     return web3.utils.fromWei(n.toString(), 'ether');
@@ -59,21 +62,37 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         await this.collateralPool.initialize(this.fantomMintAddressProvider.address, true);
         
         this.debtPool = await FantomDeFiTokenStorage.new({from: owner});
-        await this.debtPool.initialize(this.fantomMintAddressProvider.address, true);   
+        await this.debtPool.initialize(this.fantomMintAddressProvider.address, true);
+        
+        this.testToken = await TestToken.new({from:owner});
+        
+        this.testOraclePriceProxy = await TestPriceOracleProxy.new({from: owner});
         
         await this.fantomMintAddressProvider.setFantomMint(this.fantomMint.address, {from: owner});
         await this.fantomMintAddressProvider.setCollateralPool(this.collateralPool.address, {from: owner});
         await this.fantomMintAddressProvider.setDebtPool(this.debtPool.address, {from: owner});
         await this.fantomMintAddressProvider.setTokenRegistry(this.fantomMintTokenRegistry.address, {from: owner});
-        await this.fantomMintAddressProvider.setPriceOracleProxy(livePriceOracleProxyAddress, {from:owner});
+        //await this.fantomMintAddressProvider.setPriceOracleProxy(livePriceOracleProxyAddress, {from:owner});
+        await this.fantomMintAddressProvider.setPriceOracleProxy(this.testOraclePriceProxy.address, {from:owner});
 
-        await this.fantomMint.add(account, wFTM, new BN('1000'));
+        wFTM = this.testToken.address;
+
+        await this.testToken.mint(account, etherToWei(150));
+        //await this.fantomMint.add(account, wFTM, etherToWei(150));
+
+        await this.testOraclePriceProxy.setPrice(wFTM, etherToWei(0.2));
 
     })
 
     describe('view functions', function () {
         
-        it('get collateralLowestDebtRatio4dec', async function() {
+        it('gets the price of wFTM', async function() {
+            const price = await this.testOraclePriceProxy.getPrice(wFTM);
+            console.log(weiToEther(price));
+            expect(weiToEther(price).toString()).to.be.equal('0.2');
+        })
+
+        /* it('get collateralLowestDebtRatio4dec', async function() {
             const collateralLowestDebtRatio4dec = await this.fantomMint.getCollateralLowestDebtRatio4dec();
             //console.log(collateralLowestDebtRatio4dec.toString());
             expect(collateralLowestDebtRatio4dec).to.be.bignumber.greaterThan('0');
@@ -134,10 +153,10 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             //console.log('live status: ', live.toString());
             expect(live).to.be.equal(true);
         })
-
+ */
     })
 
-    describe('liquidation', function () {        
+   /*  describe('liquidation', function () {        
         
         beforeEach(async function () {
             await this.fantomLiquidationManager.addAdmin(admin, {from:owner});
@@ -155,5 +174,5 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             
             ///await this.fantomLiquidationManager.startLiquidation(account, {from: admin});
         })
-    })
+    }) */
 })
