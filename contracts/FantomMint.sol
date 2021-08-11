@@ -133,11 +133,6 @@ contract FantomMint is Initializable, FantomMintBalanceGuard, FantomMintCollater
         return addressProvider.getCollateralPool().totalOf(_account);
     }
 
-    // add token to collateral
-    function add(address _account, address _token, uint256 _amount) public {
-        addressProvider.getCollateralPool().add(_account, _token,  _amount);
-    }
-
     // getMaxToWithdraw returns the max amount of tokens to withdraw with the given ratio.
     function getMaxToWithdraw(address _account, address _token, uint256 _ratio) public view returns (uint256) {
         return maxToWithdraw(_account, _token, _ratio);

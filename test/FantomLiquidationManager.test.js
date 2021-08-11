@@ -17,6 +17,7 @@ const FantomMintTokenRegistry = artifacts.require('FantomMintTokenRegistry');
 const FantomDeFiTokenStorage = artifacts.require('FantomDeFiTokenStorage');
 const FantomMint = artifacts.require('FantomMint');
 const FantomMintAddressProvider = artifacts.require('FantomMintAddressProvider');
+const FantomFUSD = artifacts.require('FantomFUSD');
 const TestToken = artifacts.require('TestToken');
 const TestPriceOracleProxy = artifacts.require('TestPriceOracleProxy');
 
@@ -61,6 +62,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         this.debtPool = await FantomDeFiTokenStorage.new({from: owner});
         await this.debtPool.initialize(this.fantomMintAddressProvider.address, true);
         
+        this.fantomFUSD = await FantomFUSD.new({from: owner});
+        await this.fantomFUSD.initialize(owner);
+
         this.testToken = await TestToken.new({from:owner});
         await this.testToken.initialize("wFTM", "wFTM", 18);       
         
@@ -78,6 +82,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         await this.testOraclePriceProxy.setPrice(this.testToken.address, etherToWei(1));
 
         await this.fantomMintTokenRegistry.addToken(this.testToken.address, "", this.testOraclePriceProxy.address, 8, true, true, false);
+        await this.fantomMintTokenRegistry.addToken(this.fantomFUSD.address, "", this.testOraclePriceProxy.address, 8, true, false, true);
 
     })
 
@@ -91,22 +96,20 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
 
         it('approves and deposits 9999 wFTM', async function() {
             await this.testToken.approve(this.fantomMint.address, etherToWei(9999), {from: account});
-
-            // how to deposit 10000 to the system (to the collateral vault?)
-            // using this function?
-            await this.fantomMint.add(account, this.testToken.address, etherToWei(9999));
-            //
+            const canDeposit = await this.fantomMintTokenRegistry.canDeposit(this.testToken.address);
+            console.log('canDeposit: ', canDeposit);
+            //await this.fantomMint.mustDeposit(this.testToken.address, etherToWei(9999), {from: account});        
 
             // how to mint the fUSD for account?
         })
 
-        /* it('get collateralLowestDebtRatio4dec', async function() {
+       /*  it('get collateralLowestDebtRatio4dec', async function() {
             const collateralLowestDebtRatio4dec = await this.fantomMint.getCollateralLowestDebtRatio4dec();
-            //console.log(collateralLowestDebtRatio4dec.toString());
+            console.log(collateralLowestDebtRatio4dec.toString());
             expect(collateralLowestDebtRatio4dec).to.be.bignumber.greaterThan('0');
-        })
+        }) */
 
-        it('check collateral value', async function() {
+      /*  it('check collateral value', async function() {
             const collateralValue = await this.fantomMint.collateralValueOf(account, wFTM, 0);
             //console.log (collateralValue.toString());
             expect(collateralValue).to.be.bignumber.greaterThan('0');

@@ -17,7 +17,7 @@ const {
 
     beforeEach(async function () {
         this.token = await FantomFUSD.new ({from:owner})
-        this.token.initialize(owner)
+        await this.token.initialize(owner)
     })
 
     describe('metadata', function () {
