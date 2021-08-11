@@ -73,7 +73,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         //await this.fantomMintAddressProvider.setPriceOracleProxy(livePriceOracleProxyAddress, {from:owner});
         await this.fantomMintAddressProvider.setPriceOracleProxy(this.testOraclePriceProxy.address, {from:owner});
 
-        await this.testToken.mint(account, etherToWei(10000));
+        await this.testToken.mint(account, etherToWei(9999));
 
         await this.testOraclePriceProxy.setPrice(this.testToken.address, etherToWei(1));
 
@@ -89,12 +89,12 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             expect(weiToEther(price).toString()).to.be.equal('1');
         })
 
-        it('approves and deposits 1000 wFTM', async function() {
-            await this.testToken.approve(this.fantomMint.address, etherToWei(10000), {from: account});
+        it('approves and deposits 9999 wFTM', async function() {
+            await this.testToken.approve(this.fantomMint.address, etherToWei(9999), {from: account});
 
             // how to deposit 10000 to the system (to the collateral vault?)
             // using this function?
-            await this.fantomMint.add(account, this.testToken.address, etherToWei(10000));
+            await this.fantomMint.add(account, this.testToken.address, etherToWei(9999));
             //
 
             // how to mint the fUSD for account?
