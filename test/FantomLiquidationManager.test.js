@@ -25,9 +25,6 @@ const TestPriceOracleProxy = artifacts.require('TestPriceOracleProxy');
 
 //const livePriceOracleProxyAddress ="0x8173B69510bA3fDE9Dc945FB11F17c24042f63F4";
 
-//const wFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
-let wFTM;
-
 const weiToEther = (n) => {
     return web3.utils.fromWei(n.toString(), 'ether');
 }
@@ -65,6 +62,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         await this.debtPool.initialize(this.fantomMintAddressProvider.address, true);
         
         this.testToken = await TestToken.new({from:owner});
+        await this.testToken.initialize("wFTM", "wFTM", 18);       
         
         this.testOraclePriceProxy = await TestPriceOracleProxy.new({from: owner});
         
@@ -75,21 +73,31 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         //await this.fantomMintAddressProvider.setPriceOracleProxy(livePriceOracleProxyAddress, {from:owner});
         await this.fantomMintAddressProvider.setPriceOracleProxy(this.testOraclePriceProxy.address, {from:owner});
 
-        wFTM = this.testToken.address;
+        await this.testToken.mint(account, etherToWei(10000));
 
-        await this.testToken.mint(account, etherToWei(150));
-        //await this.fantomMint.add(account, wFTM, etherToWei(150));
+        await this.testOraclePriceProxy.setPrice(this.testToken.address, etherToWei(1));
 
-        await this.testOraclePriceProxy.setPrice(wFTM, etherToWei(0.2));
+        await this.fantomMintTokenRegistry.addToken(this.testToken.address, "", this.testOraclePriceProxy.address, 8, true, true, false);
 
     })
 
     describe('view functions', function () {
         
         it('gets the price of wFTM', async function() {
-            const price = await this.testOraclePriceProxy.getPrice(wFTM);
+            const price = await this.testOraclePriceProxy.getPrice(this.testToken.address);
             console.log(weiToEther(price));
-            expect(weiToEther(price).toString()).to.be.equal('0.2');
+            expect(weiToEther(price).toString()).to.be.equal('1');
+        })
+
+        it('approves and deposits 1000 wFTM', async function() {
+            await this.testToken.approve(this.fantomMint.address, etherToWei(10000), {from: account});
+
+            // how to deposit 10000 to the system (to the collateral vault?)
+            // using this function?
+            await this.fantomMint.add(account, this.testToken.address, etherToWei(10000));
+            //
+
+            // how to mint the fUSD for account?
         })
 
         /* it('get collateralLowestDebtRatio4dec', async function() {
@@ -113,14 +121,14 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         it('gets a token', async function() {
             const token = await this.collateralPool.tokens(0);
             //console.log(token);
-            expect(token).to.be.equal(wFTM);
+            expect(token).to.be.equal(this.testToken.address);
         })
 
         it('gets all tokens', async function() {
             const tokens = await this.collateralPool.getTokens();
             //console.log(tokens);
             expect(tokens.length).to.be.equal(1);
-            expect(tokens[0]).to.be.equal(wFTM);
+            expect(tokens[0]).to.be.equal(this.testToken.address);
         })
 
         it('gets the tokens count', async function() {
