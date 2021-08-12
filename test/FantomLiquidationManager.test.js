@@ -70,7 +70,8 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         await this.fantomMintAddressProvider.setDebtPool(this.debtPool.address, {from: owner});
         await this.fantomMintAddressProvider.setTokenRegistry(this.fantomMintTokenRegistry.address, {from: owner});
         await this.fantomMintAddressProvider.setRewardDistribution(this.fantomMintRewardDistribution.address, {from:owner});
-        await this.fantomMintAddressProvider.setPriceOracleProxy(this.testOraclePriceProxy.address, {from:owner});        
+        await this.fantomMintAddressProvider.setPriceOracleProxy(this.testOraclePriceProxy.address, {from:owner});
+        await this.fantomMintAddressProvider.setFantomLiquidationManager(this.fantomLiquidationManager.address, {from: owner});
 
         await this.testToken.mint(account, etherToWei(9999));
 
@@ -138,7 +139,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             //console.log(isAdmin);
             expect(isAdmin).to.be.equal(true);
 
-            //await this.fantomLiquidationManager.startLiquidation(account, {from: admin})
+            await this.fantomLiquidationManager.startLiquidation(account, {from: admin});
         })
 
        /*  it('get collateralLowestDebtRatio4dec', async function() {
