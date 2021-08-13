@@ -140,6 +140,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             expect(isAdmin).to.be.equal(true);
 
             await this.fantomLiquidationManager.startLiquidation(account, {from: admin});
+
+            const auctionInformation = await this.fantomLiquidationManager.actionList(account);
+            console.log(auctionInformation);
         })
 
        /*  it('get collateralLowestDebtRatio4dec', async function() {
