@@ -217,13 +217,13 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         if (debtValue >= ERC20(fantomUSD).balanceOf(msg.sender)) {
             return ERR_LOW_BALANCE;
         }
-
+        
         // make sure we are allowed to transfer fUSD from the caller
         // to the liqudation pool.
         if (debtValue >= ERC20(fantomUSD).allowance(msg.sender, address(this))) {
             return ERR_LOW_ALLOWANCE;
         }
-
+        
         // make sure the collateral is sufficient to buy
         if (amount >= ERC20(_token).balanceOf(collateralContract)) {
             return ERR_LOW_BALANCE;
@@ -234,7 +234,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         if (amount >= ERC20(_token).allowance(collateralContract, msg.sender)) {
             return ERR_LOW_ALLOWANCE;
         }
-
+        
         ERC20(fantomUSD).safeTransferFrom(msg.sender, address(this), debtValue);
 
         ERC20(_token).safeTransferFrom(collateralContract, msg.sender, amount);

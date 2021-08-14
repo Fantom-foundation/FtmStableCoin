@@ -32,7 +32,7 @@ const etherToWei = (n) => {
   }
 
 
-contract('Unit Test for FantomLiquidationManager', function ([owner, admin, account]) {
+contract('Unit Test for FantomLiquidationManager', function ([owner, admin, account, bidder1, bidder2]) {
 
     beforeEach(async function () {
 
@@ -84,6 +84,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
         await this.fantomFUSD.addMinter(this.fantomMint.address, {from:owner});
 
         await this.fantomLiquidationManager.updateFantomMintContractAddress(this.fantomMint.address, {from:owner});
+        await this.fantomLiquidationManager.updateFantomUSDAddress(this.fantomFUSD.address);
 
     })
 
@@ -146,9 +147,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             //console.log(auctionInformation.owner);
             expect(auctionInformation.owner).to.be.equal(account);
 
-            
-
-
+            const errorCode = await this.fantomLiquidationManager.bidAuction(account, this.testToken.address, etherToWei(9999));
+            console.log('result: ', errorCode.toString());
+            console.log('result: ', errorCode)
         })
 
        /*  it('get collateralLowestDebtRatio4dec', async function() {
