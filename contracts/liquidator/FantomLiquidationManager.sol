@@ -196,13 +196,47 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         
         uint totalValue = 0;
         for (uint i = 0; i < pool.tokensCount(); i++) {
-            totalValue += liquidatedVault[_collateralOwner][pool.tokens(i)];
+            //totalValue += liquidatedVault[_collateralOwner][pool.tokens(i)];
+            totalValue = totalValue.add(liquidatedVault[_collateralOwner][pool.tokens(i)]);
         }
 
         return totalValue;
     }
 
-    function bidAuction(address _collateralOwner, address _token, uint256 amount) public returns (uint256) {
+    function getDebtValue(address _collateralOwner, address _token, uint256 amount) public view returns(uint256){
+        AuctionInformation storage _auction = auctionList[_collateralOwner];
+
+        uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
+        uint256 debtValue = buyValue
+            .mul(10000)
+            .div(_auction.currentPrice);
+
+        return debtValue;
+        
+    }
+
+    function getBuyValue(address _collateralOwner, address _token, uint256 amount) public view returns(uint256){
+        AuctionInformation storage _auction = auctionList[_collateralOwner];
+
+        uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
+        return buyValue;
+
+    }
+
+    function bidAuction(address _collateralOwner, address _token, uint256 amount) external returns(uint256){
+        uint256 errorCode = _bidAuction(_collateralOwner, _token, amount);
+        
+        require(errorCode != ERR_LOW_BALANCE + IN_FUSD, "insufficient fUSD balance");
+
+        require(errorCode != ERR_LOW_ALLOWANCE + IN_FUSD, "insufficient fUSD allowance");
+
+        require(errorCode != ERR_LOW_BALANCE + IN_FUSD, "insufficient collateral balance");
+
+        require(errorCode != ERR_LOW_ALLOWANCE + IN_FUSD, "insufficient collateral allowance");
+
+    }    
+
+    function _bidAuction(address _collateralOwner, address _token, uint256 amount) internal returns (uint256) {
         require(auctionIndex[_collateralOwner] > 0, "Target Collateral is not in Auction.");
         require(liquidatedVault[_collateralOwner][_token] >= amount, "Collateral is not sufficient to buy.");
 
@@ -215,31 +249,32 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         
         // make sure caller has enough fUSD to cover the collateral
         if (debtValue >= ERC20(fantomUSD).balanceOf(msg.sender)) {
-            return ERR_LOW_BALANCE;
+            return ERR_LOW_BALANCE + IN_FUSD;
         }
         
         // make sure we are allowed to transfer fUSD from the caller
         // to the liqudation pool.
         if (debtValue >= ERC20(fantomUSD).allowance(msg.sender, address(this))) {
-            return ERR_LOW_ALLOWANCE;
+            return ERR_LOW_ALLOWANCE + IN_FUSD;
         }
         
         // make sure the collateral is sufficient to buy
         if (amount >= ERC20(_token).balanceOf(collateralContract)) {
-            return ERR_LOW_BALANCE;
+            return ERR_LOW_BALANCE + IN_COLLATERAL;
         }
 
         // make sure we are allowed to transfer the collateral from the collateral contract
         // to the buyer
         if (amount >= ERC20(_token).allowance(collateralContract, msg.sender)) {
-            return ERR_LOW_ALLOWANCE;
+            return ERR_LOW_ALLOWANCE + IN_COLLATERAL;
         }
         
         ERC20(fantomUSD).safeTransferFrom(msg.sender, address(this), debtValue);
 
         ERC20(_token).safeTransferFrom(collateralContract, msg.sender, amount);
 
-        liquidatedVault[_collateralOwner][_token] -= amount;
+        //liquidatedVault[_collateralOwner][_token] -= amount;
+        liquidatedVault[_collateralOwner][_token] = liquidatedVault[_collateralOwner][_token].add(amount);
 
         emit Withdrawn(_token, msg.sender, amount);
 
@@ -293,7 +328,8 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         uint index;
         for (index = 0; index < pool.tokensCount(); index++) {
             uint256 collatBalance = pool.balanceOf(targetAddress, pool.tokens(index));
-            liquidatedVault[targetAddress][pool.tokens(index)] += collatBalance;
+            //liquidatedVault[targetAddress][pool.tokens(index)] += collatBalance;
+            liquidatedVault[targetAddress][pool.tokens(index)] = liquidatedVault[targetAddress][pool.tokens(index)].add(collatBalance);
             pool.sub(targetAddress, pool.tokens(index), collatBalance);
         }
 

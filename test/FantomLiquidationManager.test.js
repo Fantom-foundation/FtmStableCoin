@@ -142,14 +142,23 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
 
             await this.fantomLiquidationManager.startLiquidation(account, {from: admin});
 
+            await this.fantomFUSD.mint(bidder1, etherToWei(500000), {from: owner});
+            const bidder1fUSDBalance = await this.fantomFUSD.balanceOf(bidder1);
+            console.log('bidder1fUSDBalance: ', weiToEther(bidder1fUSDBalance));
+
             const auctionInformation = await this.fantomLiquidationManager.auctionList(account);
             //console.log(auctionInformation);
-            //console.log(auctionInformation.owner);
+            console.log("auction owner: ", auctionInformation.owner);
+            console.log("auction start price: ", weiToEther(auctionInformation.startPrice));
             expect(auctionInformation.owner).to.be.equal(account);
+            
+            const buyValue = await this.fantomLiquidationManager.getBuyValue(account, this.testToken.address, etherToWei(9999));
+            console.log('buyValue: ', weiToEther(buyValue));
 
-            const errorCode = await this.fantomLiquidationManager.bidAuction(account, this.testToken.address, etherToWei(9999));
-            console.log('result: ', errorCode.toString());
-            console.log('result: ', errorCode)
+            const debtValue = await this.fantomLiquidationManager.getDebtValue(account, this.testToken.address, etherToWei(9999));
+            console.log('debtValue: ', weiToEther(debtValue));
+
+            //await this.fantomLiquidationManager.bidAuction(account, this.testToken.address, etherToWei(9999), {from: bidder1});
         })
 
        /*  it('get collateralLowestDebtRatio4dec', async function() {
