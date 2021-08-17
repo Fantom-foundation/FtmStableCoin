@@ -174,4 +174,14 @@ contract FantomMint is Initializable, FantomMintBalanceGuard, FantomMintCollater
 
         return (_price, _digits);
     }
+
+    modifier onlyLiquidationManager() {
+        require(msg.sender == address(addressProvider.getFantomLiquidationManager()), "token storage access restricted"); 
+        _;       
+    }
+    
+    function ERC20approve(address _token, uint256 _amount) public onlyLiquidationManager {
+        ERC20(_token).approve(msg.sender, _amount);
+
+    }
 }

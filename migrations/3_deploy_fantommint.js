@@ -4,9 +4,9 @@ const owner = '0x3ddb44B03147b04b8f49FEd0f8bE5Afb13562976';
 
 module.exports = async function(deployer) {
 
-    await deployer.deploy(FantomMint);
+    //await deployer.deploy(FantomMint);
 
-    const fantomMint = await FantomMint.deployed();
+    //const fantomMint = await FantomMint.deployed();
 
-    await fantomMint.initialize(owner, addressProvider);
+    //await fantomMint.initialize(owner, addressProvider);
 }

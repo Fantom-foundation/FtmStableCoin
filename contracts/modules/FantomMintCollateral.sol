@@ -247,5 +247,5 @@ contract FantomMintCollateral is Initializable, ReentrancyGuard, FantomMintError
     // ratio situation of the account.
     function _withdrawMax(address _token, uint256 _ratio) internal returns (uint256) {
         return _withdraw(_token, getMaxToWithdraw(msg.sender, _token, _ratio));
-    }
+    }    
 }
