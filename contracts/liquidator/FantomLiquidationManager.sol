@@ -166,7 +166,8 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         AuctionInformation memory _auction = auctionList[_collateralOwner];
         uint256 timeDiff = block.timestamp - _auction.startTime;
         uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        uint256 currentPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
         return (_auction.startTime, _auction.endTime, currentPrice);
     }
 
@@ -175,7 +176,8 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         require(_auction.round > 0, "Auction not found");
         uint256 timeDiff = now - _auction.startTime;
         uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 _nextPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        //uint256 _nextPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        uint256 _nextPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
         if (_auction.endTime >= now || _nextPrice < _auction.minPrice) {
             // Restart the Auction
             _auction.round = _auction.round + 1;
@@ -208,7 +210,8 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
         uint256 timeDiff = block.timestamp - _auction.startTime;
         uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+      //  uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        uint256 currentPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
         uint256 debtValue = buyValue
             .mul(10000)
             .div(currentPrice);
@@ -263,7 +266,8 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         
         uint256 timeDiff = block.timestamp - _auction.startTime;
         uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        uint256 currentPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
 
         uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
         uint256 debtValue = buyValue
@@ -299,9 +303,9 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         
         //ERC20(_token).safeTransferFrom(collateralContract, msg.sender, amount);
         ERC20(_token).safeTransferFrom(fantomMintContract, msg.sender, amount);
-        return ERR_NO_ERROR;
+        
         //liquidatedVault[_collateralOwner][_token] -= amount;
-        liquidatedVault[_collateralOwner][_token] = liquidatedVault[_collateralOwner][_token].add(amount);
+        liquidatedVault[_collateralOwner][_token] = liquidatedVault[_collateralOwner][_token].sub(amount);
 
         emit Withdrawn(_token, msg.sender, amount);
 
