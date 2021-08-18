@@ -235,9 +235,10 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         return currentPrice;
     }
 
-    function fantomMintERC20Approve(address _token, uint256 _amount) public onlyOwner {
+    /* function fantomMintERC20Approve(address _token, uint256 _amount) public onlyOwner {
         FantomMint(fantomMintContract).ERC20approve(_token, _amount);
-    }
+    } */
+
     function bidAuction(address _collateralOwner, address _token, uint256 amount) external {
         uint256 errorCode = _bidAuction(_collateralOwner, _token, amount);
         
@@ -295,14 +296,16 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         // make sure we are allowed to transfer the collateral from the collateral contract
         // to the buyer
         //if (amount >= ERC20(_token).allowance(collateralContract, msg.sender)) {
-        if (amount > ERC20(_token).allowance(fantomMintContract, address(this))) {
+        /* if (amount > ERC20(_token).allowance(fantomMintContract, msg.sender)) {
             return ERR_LOW_ALLOWANCE + IN_COLLATERAL;
-        }
+        } */
+        FantomMint(fantomMintContract).settleLiquidationBid(_token, msg.sender, amount);
         
         ERC20(fantomUSD).safeTransferFrom(msg.sender, address(this), debtValue);
         
         //ERC20(_token).safeTransferFrom(collateralContract, msg.sender, amount);
-        ERC20(_token).safeTransferFrom(fantomMintContract, msg.sender, amount);
+        //ERC20(_token).safeTransferFrom(fantomMintContract, msg.sender, amount);
+
         
         //liquidatedVault[_collateralOwner][_token] -= amount;
         liquidatedVault[_collateralOwner][_token] = liquidatedVault[_collateralOwner][_token].sub(amount);

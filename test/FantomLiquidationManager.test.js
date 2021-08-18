@@ -167,11 +167,25 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, acco
             await this.fantomFUSD.approve(this.fantomLiquidationManager.address, bidder1fUSDBalance, {from: bidder1});
             const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
             console.log('balance4: ', weiToEther(balance4));
-            await this.fantomLiquidationManager.fantomMintERC20Approve(this.testToken.address, etherToWei(9999), {from: owner});
-            const fantomMintAllowance = await this.testToken.allowance(this.fantomMint.address, this.fantomLiquidationManager.address);
-            console.log('fantomMintAllowance: ', weiToEther(fantomMintAllowance));
+            expect(weiToEther(balance4)*1).to.be.equal(9999);
 
+            /* await this.fantomLiquidationManager.fantomMintERC20Approve(this.testToken.address, etherToWei(9999), {from: owner});
+            const fantomMintAllowance = await this.testToken.allowance(this.fantomMint.address, this.fantomLiquidationManager.address);
+            console.log('fantomMintAllowance: ', weiToEther(fantomMintAllowance)); */
+            
             await this.fantomLiquidationManager.bidAuction(account, this.testToken.address, etherToWei(9999), {from: bidder1});
+            const balance5 = await this.testToken.balanceOf(this.fantomMint.address);
+            console.log('balance5: ', weiToEther(balance5));
+            expect(weiToEther(balance5)*1).to.be.equal(0);
+            const balance6 = await this.testToken.balanceOf(bidder1);
+            console.log('balance6: ', weiToEther(balance6));
+            expect(weiToEther(balance6)*1).to.be.equal(9999);
+            const balance7 = await this.fantomFUSD.balanceOf(bidder1);
+            console.log('balance7: ', weiToEther(balance7));
+            expect(weiToEther(balance7)*1).to.be.lessThan(500000);
+            const balance8 = await this.fantomFUSD.balanceOf(this.fantomLiquidationManager.address);
+            console.log('balance8: ', weiToEther(balance8));
+        
             
         })
 

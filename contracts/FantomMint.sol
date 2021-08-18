@@ -180,8 +180,12 @@ contract FantomMint is Initializable, FantomMintBalanceGuard, FantomMintCollater
         _;       
     }
     
-    function ERC20approve(address _token, uint256 _amount) public onlyLiquidationManager {
+   /*  function ERC20approve(address _token, uint256 _amount) public onlyLiquidationManager {
         ERC20(_token).approve(msg.sender, _amount);
 
+    } */
+
+    function settleLiquidationBid(address _token, address _destination, uint256 _amount) public onlyLiquidationManager {
+        ERC20(_token).transfer(_destination, _amount);
     }
 }
