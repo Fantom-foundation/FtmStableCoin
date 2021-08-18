@@ -87,7 +87,8 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         // initialize default values
         admins[owner] = true;
         live = true;
-        auctionBeginPrice = 300;
+        //auctionBeginPrice = 300;
+        auctionBeginPrice = 30000;
         intervalPriceDiff = 10;
         intervalTimeDiff = 60;
         defaultMinPrice = 200;
