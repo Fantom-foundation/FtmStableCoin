@@ -21,9 +21,6 @@ const FantomFUSD = artifacts.require('FantomFUSD');
 const TestToken = artifacts.require('TestToken');
 const TestPriceOracleProxy = artifacts.require('TestPriceOracleProxy');
 
-//const addressProvider = '0xcb20a1A22976764b882C2f03f0C8523F3df54b10';
-//const owner = '0xe8A06462628b49eb70DBF114EA510EB3BbBDf559';
-
 const etherToWei = (n) => {
     return new web3.utils.BN(
       web3.utils.toWei(n.toString(), 'ether')
