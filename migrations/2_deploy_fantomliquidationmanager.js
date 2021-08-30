@@ -63,6 +63,7 @@ module.exports = async function(deployer, network, accounts) {
     
         await fantomLiquidationManager.updateFantomMintContractAddress(fantomMint.address);
         await fantomLiquidationManager.updateFantomUSDAddress(fantomFUSD.address);
+        await fantomLiquidationManager.updateAuctionBeginPrice(10000);
         
         await deployer.deploy(TestToken);
         const testToken = await TestToken.deployed();

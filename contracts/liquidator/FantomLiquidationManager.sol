@@ -212,7 +212,7 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         uint256 timeDiff = block.timestamp - _auction.startTime;
         uint256 currentRound = timeDiff / _auction.intervalTime;
       //  uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 currentPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
+        uint256 currentPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
         uint256 debtValue = buyValue
             .mul(10000)
             .div(currentPrice);
@@ -229,9 +229,12 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         
         AuctionInformation storage _auction = auctionList[_collateralOwner];
 
-        uint256 timeDiff = block.timestamp - _auction.startTime;
-        uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        //uint256 timeDiff = block.timestamp - _auction.startTime;
+        uint256 timeDiff = block.timestamp.sub(_auction.startTime);
+        //uint256 currentRound = timeDiff / _auction.intervalTime;
+        uint256 currentRound = timeDiff.div(_auction.intervalTime);
+        //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
+        uint256 currentPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
 
         return currentPrice;
     }
@@ -266,10 +269,12 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
         AuctionInformation storage _auction = auctionList[_collateralOwner];
         
-        uint256 timeDiff = block.timestamp - _auction.startTime;
-        uint256 currentRound = timeDiff / _auction.intervalTime;
+       // uint256 timeDiff = block.timestamp - _auction.startTime;
+        uint256 timeDiff = block.timestamp.sub(_auction.startTime);
+        //uint256 currentRound = timeDiff / _auction.intervalTime;
+        uint256 currentRound = timeDiff.div(_auction.intervalTime);
         //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 currentPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
+        uint256 currentPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
 
         uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
         uint256 debtValue = buyValue
