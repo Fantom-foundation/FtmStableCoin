@@ -229,5 +229,10 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     function getTokens() public view returns(address[] memory){
         return tokens;
     }
+
+    // getToken returns the specific token from index.
+    function getToken(uint256 _index) public view returns (address) {
+        return tokens[_index];
+    }
      
 }

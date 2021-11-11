@@ -33,5 +33,8 @@ interface IFantomDeFiTokenStorage {
     //function tokens() external view returns (address[] memory);
     function tokens(uint256) external view returns (address);
 
+    // getToken returns the specific token from index.    
+    function getToken(uint256 _index) external view returns (address);
+
     function tokensCount() external view returns (uint256);
 }

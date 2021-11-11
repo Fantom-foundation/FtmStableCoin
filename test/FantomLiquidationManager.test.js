@@ -33,7 +33,7 @@ const etherToWei = (n) => {
 }
 
 
-contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borrower, bidder1, bidder2]) {
+contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borrower, bidder1, bidder2, fantomFeeVault]) {
 
     beforeEach(async function () {
 
@@ -143,7 +143,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
 
             // check the mint maximum amount possible of fUSD for borrower
             const maxToMint = await this.fantomMint.maxToMint(borrower, this.fantomFUSD.address, 32000);
-            //console.log('maxToMint in ether: ', weiToEther(maxToMint));
+            console.log('maxToMint in ether: ', weiToEther(maxToMint));
             expect(maxToMint).to.be.bignumber.greaterThan('0');
             expect(weiToEther(maxToMint)*1).to.be.lessThanOrEqual(3333);
 
@@ -176,55 +176,62 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             // set the debtValue-buyValue ratio to 1
             await this.fantomLiquidationManager.updateAuctionBeginPrice(10000, {from:owner});
 
-            // liquidataion is started by the newly added admin
-            await this.fantomLiquidationManager.startLiquidation(borrower, {from: admin});
+            const debtValueBeforeLiquidation = await this.fantomLiquidationManager.getDebtValue(borrower);
+            console.log('debtValueBeforeLiquidation: ', weiToEther(debtValueBeforeLiquidation));
             
-            // make sure the borrow is the auction list
-            const auctionInformation = await this.fantomLiquidationManager.auctionList(borrower);
-            //console.log("auction owner: ", auctionInformation.owner);
-            //console.log("auction start price: ", weiToEther(auctionInformation.startPrice));
-            expect(auctionInformation.owner).to.be.equal(borrower);
-                        
-            /* const buyValue = await this.fantomLiquidationManager.getBuyValue(this.testToken.address, etherToWei(9999));
-            console.log('buyValue: ', weiToEther(buyValue));
+            // liquidataion is started by the newly added admin
+            const result = await this.fantomLiquidationManager.startLiquidation(borrower, {from: admin});
+            
+            const debtValueAfterLiquidation = await this.fantomLiquidationManager.getDebtValue(borrower);
+            console.log('debtValueAfterLiquidation: ', weiToEther(debtValueAfterLiquidation));
+            
+            expectEvent.inLogs(result.logs, 'AuctionStarted',{
+                nonce: new BN('1'),
+                user: borrower
+            })
+            //const currentPrice = await this.fantomLiquidationManager.getCurrentPrice(borrower);
+            //console.log('currentPrice: ', weiToEther(currentPrice)); 
 
-            const currentPrice = await this.fantomLiquidationManager.getCurrentPrice(borrower);
-            console.log('currentPrice: ', weiToEther(currentPrice)); */
-
-            // get the value that bidder1 has to pay
-            const debtValue = await this.fantomLiquidationManager.getDebtValue(borrower, this.testToken.address, etherToWei(9999));
-            // console.log('debtValue: ', weiToEther(debtValue));
+            
 
             // bidder1 approve the transfer of the neccessary amount by FantomLiquidationManager
-            await this.fantomFUSD.approve(this.fantomLiquidationManager.address, debtValue, {from: bidder1});
+            //await this.fantomFUSD.approve(this.fantomLiquidationManager.address, debtValueBeforeLiquidation, {from: bidder1});
 
-            /* const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
-            console.log('balance4: ', weiToEther(balance4));
-            expect(weiToEther(balance4)*1).to.be.equal(9999); */
+            const balanceOfRemainingDebt = await this.fantomLiquidationManager.balanceOfRemainingDebt(1);
+            console.log('balanceOfRemainingDebt: ', weiToEther(balanceOfRemainingDebt));
+
+            await this.fantomFUSD.approve(this.fantomLiquidationManager.address, balanceOfRemainingDebt, {from: bidder1});
+
+
+            // const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
+            // console.log('balance4: ', weiToEther(balance4));
+            // expect(weiToEther(balance4)*1).to.be.equal(9999);
 
             // bidder1 bids
-            await this.fantomLiquidationManager.bidAuction(borrower, this.testToken.address, etherToWei(9999), {from: bidder1});
-
+            //await this.fantomLiquidationManager.bidAuction(borrower, this.testToken.address, etherToWei(9999), {from: bidder1});
+            await this.fantomLiquidationManager.updateFantomFeeVault(fantomFeeVault, {from:owner});
+            await this.fantomLiquidationManager.bidAuction(1, new BN('50000000'), {from: bidder1});
             // make sure FantomMint contract now no longer has the collateral and has transferred it to bidder
-            const balance5 = await this.testToken.balanceOf(this.fantomMint.address);
+            //const balance5 = await this.testToken.balanceOf(this.fantomMint.address);
             //console.log('balance5: ', weiToEther(balance5));
-            expect(weiToEther(balance5)*1).to.be.equal(0);
-            const balance6 = await this.testToken.balanceOf(bidder1);
+            //expect(weiToEther(balance5)*1).to.be.equal(0);
+            //const balance6 = await this.testToken.balanceOf(bidder1);
             //console.log('balance6: ', weiToEther(balance6));
-            expect(weiToEther(balance6)*1).to.be.equal(9999);
+            //expect(weiToEther(balance6)*1).to.be.equal(9999);
 
             // the fUSD balance of bidder1 should be less than the initial amount
-            const balance7 = await this.fantomFUSD.balanceOf(bidder1);
+            //const balance7 = await this.fantomFUSD.balanceOf(bidder1);
             //console.log('balance7: ', weiToEther(balance7));
-            expect(weiToEther(balance7)*1).to.be.lessThan(500000);
+            //expect(weiToEther(balance7)*1).to.be.lessThan(500000);
 
             // make sure FantomLiquidation gets the correct amount of fUSDs from bidder
-            const balance8 = await this.fantomFUSD.balanceOf(this.fantomLiquidationManager.address);
+            //const balance8 = await this.fantomFUSD.balanceOf(this.fantomLiquidationManager.address);
             //console.log('balance8: ', weiToEther(balance8));
-            expect(weiToEther(balance8)*1).to.be.equal(4999.5);
+            //expect(weiToEther(balance8)*1).to.be.equal(4999.5);
                     
-        }) 
+        })         
 
+        /*
         it(`Scenario 2:
         borrower approves and deposits 9999 wFTM, 
         then mints possible max amount of fUSD,
@@ -310,11 +317,11 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             //console.log("auction start price: ", weiToEther(auctionInformation.startPrice));
             expect(auctionInformation.owner).to.be.equal(borrower);
             
-            /* const buyValue = await this.fantomLiquidationManager.getBuyValue(this.testToken.address, etherToWei(9999));
-            console.log('buyValue: ', weiToEther(buyValue));
+            //const buyValue = await this.fantomLiquidationManager.getBuyValue(this.testToken.address, etherToWei(9999));
+            //console.log('buyValue: ', weiToEther(buyValue));
 
-            const currentPrice = await this.fantomLiquidationManager.getCurrentPrice(borrower);
-            console.log('currentPrice: ', weiToEther(currentPrice)); */
+            //const currentPrice = await this.fantomLiquidationManager.getCurrentPrice(borrower);
+            //console.log('currentPrice: ', weiToEther(currentPrice));
 
             // get the value that bidder1 has to pay
             const debtValue = await this.fantomLiquidationManager.getDebtValue(borrower, this.testToken.address, etherToWei(9999));
@@ -323,9 +330,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             // bidder1 approve the transfer of the neccessary amount by FantomLiquidationManager
             await this.fantomFUSD.approve(this.fantomLiquidationManager.address, debtValue, {from: bidder1});
 
-            /* const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
+            // const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
             console.log('balance4: ', weiToEther(balance4));
-            expect(weiToEther(balance4)*1).to.be.equal(9999); */
+            expect(weiToEther(balance4)*1).to.be.equal(9999); 
             
             // bidder1 bids
             await this.fantomLiquidationManager.bidAuction(borrower, this.testToken.address, etherToWei(5000), {from: bidder1});
@@ -348,9 +355,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             //console.log('balance8: ', weiToEther(balance8));
             expect(weiToEther(balance8)*1).to.be.equal(2500);
                  
-        })
+        }) */
 
-        it(`Scenario 3:
+     /*   it(`Scenario 3:
         borrower approves and deposits 9999 wFTM, 
         then ints possible max amount of fUSD,
         the price of wFTM changes from 1 to 0.5,
@@ -437,11 +444,11 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             //console.log("auction start price: ", weiToEther(auctionInformation.startPrice));
             expect(auctionInformation.owner).to.be.equal(borrower);
             
-            /* const buyValue = await this.fantomLiquidationManager.getBuyValue(this.testToken.address, etherToWei(9999));
-            console.log('buyValue: ', weiToEther(buyValue));
+            // const buyValue = await this.fantomLiquidationManager.getBuyValue(this.testToken.address, etherToWei(9999));
+            // console.log('buyValue: ', weiToEther(buyValue));
 
-            const currentPrice = await this.fantomLiquidationManager.getCurrentPrice(borrower);
-            console.log('currentPrice: ', weiToEther(currentPrice)); */
+            // const currentPrice = await this.fantomLiquidationManager.getCurrentPrice(borrower);
+            // console.log('currentPrice: ', weiToEther(currentPrice));
 
             // get the value that bidder1 has to pay
             const debtValue = await this.fantomLiquidationManager.getDebtValue(borrower, this.testToken.address, etherToWei(9999));
@@ -450,9 +457,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             // bidder1 approve some amount for transfer  by FantomLiquidationManager
             await this.fantomFUSD.approve(this.fantomLiquidationManager.address, etherToWei(100), {from: bidder1});
 
-            /* const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
-            console.log('balance4: ', weiToEther(balance4));
-            expect(weiToEther(balance4)*1).to.be.equal(9999); */
+            // const balance4 = await this.fantomLiquidationManager.fantomMintERC20Balance(this.testToken.address);
+            // console.log('balance4: ', weiToEther(balance4));
+            // expect(weiToEther(balance4)*1).to.be.equal(9999);
             
             // bidder1 bids but will fail as he/she doesn't give enough fUSD allowance to FantomLiquidationManager to transfer the fUSD
             await expectRevert(this.fantomLiquidationManager.bidAuction(borrower, this.testToken.address, etherToWei(9999), {from: bidder1}), "insufficient fUSD allowance");
@@ -475,9 +482,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             //console.log('balance8: ', weiToEther(balance8));
             expect(weiToEther(balance8)*1).to.be.equal(0);
                  
-        })
+        }) */
 
-        it(`Scenario 4:
+      /*  it(`Scenario 4:
         borrower approves and deposits 9999 wFTM, 
         then ints possible max amount of fUSD,
         the price of wFTM changes from 1 to 1.5,
@@ -542,9 +549,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             // liquidataion is started by the newly added admin but it will be reverted
             await expectRevert(this.fantomLiquidationManager.startLiquidation(borrower, {from: admin}),"Collateral is not eligible for liquidation");
 
-        })
+        }) */
 
-        it(`Scenario 5:
+      /*  it(`Scenario 5:
         borrower approves and deposits 9999 wFTM, 
         then ints possible max amount of fUSD,
         the price of wFTM changes from 1 to 0.5,
@@ -661,9 +668,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             const balance6 = await this.testToken.balanceOf(bidder2);
             //console.log('balance6: ', weiToEther(balance6));
             expect(weiToEther(balance6)*1).to.be.equal(6666);
-        })
+        }) */
 
-        it(`Scenario 6:
+      /*  it(`Scenario 6:
         borrower approves and deposits 9999 wFTM, 
         then ints possible max amount of fUSD,
         the price of wFTM changes from 1 to 0.5,
@@ -707,9 +714,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             //console.log('debtValue: ', weiToEther(debtValue2));
             expect(weiToEther(debtValue2)*1).to.be.lessThan(weiToEther(debtValue)*1)
                 
-        })
+        }) */
 
-        it(`Scenario 7:
+       /* it(`Scenario 7:
         borrower approves and deposits 9999 wFTM, 
         then mints possible max amount of fUSD,
         the price of wFTM changes from 1 to 0.5,
@@ -744,9 +751,9 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             // liquidataion is started again but it will fail with ""
             await expectRevert(this.fantomLiquidationManager.startLiquidation(borrower, {from: admin}),"Collateral is not eligible for liquidation");
             
-        })
+        }) */
 
-        it(`Scenario 8:
+       /* it(`Scenario 8:
         borrower approves and deposits 6666 wFTM and 3333 wFTM2,
         then mints possible max amount of fUSD,
         the price of wFTM and wFTM2 changes from 1 to 0.5 and 0.6 respectively,
@@ -819,8 +826,7 @@ contract('Unit Test for FantomLiquidationManager', function ([owner, admin, borr
             const debtValue2 = await this.fantomLiquidationManager.getDebtValue(borrower, this.testToken2.address, etherToWei(9999));
             console.log('debtValue2: ', weiToEther(debtValue2));
 
-            })
-
+            }) */
 
     })  
 })

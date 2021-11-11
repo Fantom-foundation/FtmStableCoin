@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 
@@ -13,31 +14,38 @@ import "../modules/FantomMintBalanceGuard.sol";
 
 // FantomLiquidationManager implements the liquidation model
 // with the ability to fine tune settings by the contract owner.
-contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCodes
+contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCodes, ReentrancyGuard
 {
     // define used libs
-    using SafeMath for uint256;
+    using SafeMath for uint;
     using Address for address;
     using SafeERC20 for ERC20;
     
     // increasing contract's collateral value.
-    event Deposited(address indexed token, address indexed user, uint256 amount);
+    event Deposited(address indexed token, address indexed user, uint amount);
 
     // decreasing contract's collateral value.
-    event Withdrawn(address indexed token, address indexed user, uint256 amount);
+    event Withdrawn(address indexed token, address indexed user, uint amount);
     
-    event AuctionStarted(address indexed user);
-    event AuctionRestarted(address indexed user);
+    event AuctionStarted(uint indexed nonce, address indexed user);
+    event AuctionRestarted(uint indexed nonce, address indexed user);
 
     struct AuctionInformation {
         address owner;
-        uint256 startTime;
-        uint256 intervalTime;
-        uint256 endTime;
-        uint256 startPrice;
-        uint256 intervalPrice;
-        uint256 minPrice;
-        uint256 round;
+        uint startTime;
+        uint intervalTime;
+        uint endTime;
+        uint startPrice;
+        uint intervalPrice;
+        uint minPrice;
+        uint round;
+        uint remainingPercent;
+        uint debtPercent;
+        address[] collateralList;
+        address[] debtList;
+        mapping(address => uint) collateralValue;
+        mapping(address => uint) debtValue;
+        uint nonce;
     }
 
     bytes32 private constant MOD_FANTOM_MINT = "fantom_mint";
@@ -48,11 +56,13 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
     bytes32 private constant MOD_TOKEN_REGISTRY = "token_registry";
     bytes32 private constant MOD_ERC20_REWARD_TOKEN = "erc20_reward_token";
 
-    mapping(address => mapping(address => uint256)) public liquidatedVault;
-    mapping(address => AuctionInformation) public auctionList;
+    AuctionInformation[] internal auctionList;
+    mapping(uint => uint) public auctionIndexer;
+
+
+    // mapping(address => AuctionInformation[]) public auctionList;
     
-    address[] public collateralOwners;
-    mapping(address => uint) public auctionIndex;
+    // mapping(address => uint) public auctionIndex;
 
     // addressProvider represents the connection to other FMint related
     // contracts.
@@ -63,18 +73,21 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
     address public fantomUSD;
     address public collateralContract;
     address public fantomMintContract;
+    address public fantomFeeVault;
 
-    uint256 internal intervalPriceDiff;
-    uint256 internal intervalTimeDiff;
-    uint256 internal auctionBeginPrice;
-    uint256 internal defaultMinPrice;
-    uint256 internal minDebtValue;
+    uint internal totalNonce;
+    uint internal intervalPriceDiff;
+    uint internal intervalTimeDiff;
+    uint internal auctionBeginPrice;
+    uint internal defaultMinPrice;
+    uint internal minDebtValue;
+    uint internal pricePrecision;
+    uint internal percentPrecision;
+    uint internal auctionDuration;
 
     bool public live;
-    uint256 public maxAmt;
-    uint256 public targetAmt;
 
-    uint256 constant WAD = 10 ** 18;
+    uint constant WAD = 10 ** 18;
 
     // initialize initializes the contract properly before the first use.
     function initialize(address owner, address _addressProvider) public initializer {
@@ -87,12 +100,15 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         // initialize default values
         admins[owner] = true;
         live = true;
-        //auctionBeginPrice = 300;
-        auctionBeginPrice = 30000;
-        intervalPriceDiff = 10;
-        intervalTimeDiff = 60;
-        defaultMinPrice = 200;
+        auctionBeginPrice = 20000000;
+        intervalPriceDiff = 1000;
+        intervalTimeDiff = 1;
+        defaultMinPrice = 10 ** 8;
         minDebtValue = 100;
+        pricePrecision = 10 ** 8;
+        percentPrecision = 10 ** 8;
+        auctionDuration = 80000;
+        totalNonce = 0;
     }
 
     function addAdmin(address usr) external onlyOwner {
@@ -103,24 +119,40 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
         admins[usr] = false;
     }
 
-    function updateAuctionBeginPrice(uint256 _auctionBeginPrice) external onlyOwner {
+    function updateAuctionBeginPrice(uint _auctionBeginPrice) external onlyOwner {
         auctionBeginPrice = _auctionBeginPrice;
     }
 
-    function updateIntervalPriceDiff(uint256 _intervalPriceDiff) external onlyOwner {
+    function updateIntervalPriceDiff(uint _intervalPriceDiff) external onlyOwner {
         intervalPriceDiff = _intervalPriceDiff;
     }
 
-    function updateIntervalTimeDiff(uint256 _intervalTimeDiff) external onlyOwner {
+    function updateIntervalTimeDiff(uint _intervalTimeDiff) external onlyOwner {
         intervalTimeDiff = _intervalTimeDiff;
     }
 
-    function updateAuctionMinPrice(uint256 _defaultMinPrice) external onlyOwner {
+    function updateAuctionMinPrice(uint _defaultMinPrice) external onlyOwner {
         defaultMinPrice = _defaultMinPrice;
     }
 
-    function updateMinimumDebtValue(uint256 _minDebtValue) external onlyOwner {
+    function updateMinimumDebtValue(uint _minDebtValue) external onlyOwner {
         minDebtValue = _minDebtValue;
+    }
+
+    function updatePercentPrecision(uint _percentPrecision) external onlyOwner {
+        percentPrecision = _percentPrecision;
+    }
+
+    function updatePricePrecision(uint _pricePrecision) external onlyOwner {
+        pricePrecision = _pricePrecision;
+    }
+
+    function updateAuctionDuration(uint _auctionDuration) external onlyOwner {
+        auctionDuration = _auctionDuration;
+    }
+
+    function updateFantomFeeVault(address _fantomFeeVault) external onlyOwner {
+        fantomFeeVault = _fantomFeeVault;
     }
 
     function updateFantomUSDAddress(address _fantomUSD) external onlyOwner {
@@ -156,250 +188,203 @@ contract FantomLiquidationManager is Initializable, Ownable, FantomMintErrorCode
 
     // rewardIsEligible checks if the account is eligible to receive any reward.
     function collateralIsEligible(address _account) public view returns (bool) {
-        return FantomMint(addressProvider.getAddress(MOD_FANTOM_MINT)).checkCollateralCanDecrease(_account, getCollateralPool().tokens(0), 0);
+        return FantomMint(addressProvider.getAddress(MOD_FANTOM_MINT)).checkCollateralCanDecrease(_account, getCollateralPool().getToken(0), 0);
     }
 
-    function getLiquidationList() external view returns (address[] memory) {
-        return collateralOwners;
+    function getLiquidationList() external view returns (uint[] memory) {
+        uint[] memory nonces = new uint[](auctionList.length);
+        for (uint index = 0; index < auctionList.length; index++) {
+            nonces[index] = auctionList[index].nonce;
+        }
+        return nonces;
     }
 
-    function getLiquidationDetails(address _collateralOwner) external view returns (uint256, uint256, uint256) {
-        AuctionInformation memory _auction = auctionList[_collateralOwner];
-        uint256 timeDiff = block.timestamp - _auction.startTime;
-        uint256 currentRound = timeDiff / _auction.intervalTime;
-        //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 currentPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
-        return (_auction.startTime, _auction.endTime, currentPrice);
+    function getLiquidationDetails(uint _nonce) external view returns (
+        uint, uint, address[] memory, uint[] memory, address[] memory, uint[] memory
+    ) {
+        require(auctionIndexer[_nonce] > 0, "Auction not found");
+        AuctionInformation storage _auction = auctionList[auctionIndexer[_nonce] - 1];
+        uint timeDiff = block.timestamp - _auction.startTime;
+        uint currentRound = timeDiff.div(_auction.intervalTime);
+        uint offeringRatio = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
+
+        address[] memory collateralList = new address[](_auction.collateralList.length);
+        uint[] memory collateralValue = new uint[](_auction.collateralList.length);
+        address[] memory debtList = new address[](_auction.debtList.length);
+        uint[] memory debtValue = new uint[](_auction.debtList.length);
+        uint index;
+        for (index = 0; index < _auction.collateralList.length; index++) {
+            collateralList[index] = _auction.collateralList[index];
+            collateralValue[index] = _auction.collateralValue[_auction.collateralList[index]]
+                .mul(pricePrecision * percentPrecision * percentPrecision)
+                .div(offeringRatio * _auction.remainingPercent * _auction.debtPercent);
+        }
+        for (index = 0; index < _auction.debtList.length; index++) {
+            debtList[index] = _auction.debtList[index];
+            debtValue[index] = _auction.debtValue[_auction.debtList[index]];
+        }
+        return (_auction.startTime, _auction.endTime, collateralList, collateralValue, debtList, debtValue);
     }
 
-    function updateLiquidation(address _collateralOwner) public auth {
-        AuctionInformation storage _auction = auctionList[_collateralOwner];
+    function updateLiquidation(uint _nonce) public nonReentrant auth {
+        require(live, "Liquidation not live");
+        require(auctionIndexer[_nonce] > 0, "Auction not found");
+        AuctionInformation storage _auction = auctionList[auctionIndexer[_nonce] - 1];
         require(_auction.round > 0, "Auction not found");
-        uint256 timeDiff = now - _auction.startTime;
-        uint256 currentRound = timeDiff / _auction.intervalTime;
-        //uint256 _nextPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 _nextPrice = _auction.startPrice.sub(currentRound.mul(_auction.intervalPrice));
-        if (_auction.endTime >= now || _nextPrice < _auction.minPrice) {
+        uint timeDiff = block.timestamp.sub(_auction.startTime);
+        uint currentRound = timeDiff.div(_auction.intervalTime);
+        uint _nextPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
+        if (_auction.endTime >= block.timestamp || _nextPrice >= _auction.minPrice) {
             // Restart the Auction
             _auction.round = _auction.round + 1;
             _auction.startPrice = auctionBeginPrice;
             _auction.intervalPrice = intervalPriceDiff;
             _auction.minPrice = defaultMinPrice;
-            _auction.startTime = now;
+            _auction.startTime = block.timestamp;
             _auction.intervalTime = intervalTimeDiff;
-            _auction.endTime = now + 60000;
-            emit AuctionRestarted(_collateralOwner);
+            _auction.endTime = block.timestamp.add(auctionDuration);
+            emit AuctionRestarted(_nonce, _auction.owner);
         }
     }
 
-    function balanceOfRemainingCollateral(address _collateralOwner) public view returns (uint256) {
-        IFantomDeFiTokenStorage pool = getCollateralPool();
+    function balanceOfRemainingDebt(uint _nonce) public view returns (uint) {
+        require(auctionIndexer[_nonce] > 0, "Auction not found");
+        AuctionInformation storage _auction = auctionList[auctionIndexer[_nonce] - 1];
+        require(_auction.round > 0, "Auction not found");
         
         uint totalValue = 0;
-        for (uint i = 0; i < pool.tokensCount(); i++) {
-            //totalValue += liquidatedVault[_collateralOwner][pool.tokens(i)];
-            totalValue = totalValue.add(liquidatedVault[_collateralOwner][pool.tokens(i)]);
+        for (uint i = 0; i < _auction.debtList.length; i++) {
+            totalValue += _auction.debtValue[_auction.debtList[i]];
         }
 
         return totalValue;
     }
 
-    function getDebtValue(address _collateralOwner, address _token, uint256 amount) public view returns(uint256){
-        
-        uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
-        AuctionInformation storage _auction = auctionList[_collateralOwner];
-
-        uint256 timeDiff = block.timestamp - _auction.startTime;
-        uint256 currentRound = timeDiff / _auction.intervalTime;
-      //  uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 currentPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
-        uint256 debtValue = buyValue
-            .mul(10000)
-            .div(currentPrice);
-        return debtValue;
+    function calculateCollateralRatio(uint _remainingPercent, uint _offeringRatio, uint _debtPercent, uint _percentage) internal view returns (uint) {
+        return _percentage.mul(_offeringRatio).mul(_debtPercent)
+            .div(_remainingPercent)
+            .div(pricePrecision);
     }
 
-    function getBuyValue(address _token, uint256 amount) public view returns(uint256){
+    function bidAuction(uint _nonce, uint _percentage) public nonReentrant {
+        require(live, "Liquidation not live");
+        require(auctionIndexer[_nonce] > 0, "Auction not found");
+        AuctionInformation storage _auction = auctionList[auctionIndexer[_nonce] - 1];
+        require(_auction.round > 0, "Auction not found");
+        require(percentPrecision >= _percentage, "Collateral is not sufficient to buy.");
 
-        uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
-        return buyValue;
-    }
+        uint offeringRatio = _auction.startPrice.add(block.timestamp.sub(_auction.startTime).mul(_auction.intervalPrice).div(_auction.intervalTime));
 
-    function getCurrentPrice(address _collateralOwner) public view returns(uint256){
-        
-        AuctionInformation storage _auction = auctionList[_collateralOwner];
-
-        //uint256 timeDiff = block.timestamp - _auction.startTime;
-        uint256 timeDiff = block.timestamp.sub(_auction.startTime);
-        //uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 currentRound = timeDiff.div(_auction.intervalTime);
-        //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 currentPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
-
-        return currentPrice;
-    }
-
-    /* function fantomMintERC20Approve(address _token, uint256 _amount) public onlyOwner {
-        FantomMint(fantomMintContract).ERC20approve(_token, _amount);
-    } */
-
-    function bidAuction(address _collateralOwner, address _token, uint256 amount) external {
-        uint256 errorCode = _bidAuction(_collateralOwner, _token, amount);
-        
-        require(errorCode != ERR_LOW_BALANCE + IN_FUSD, "insufficient fUSD balance");
-
-        require(errorCode != ERR_LOW_ALLOWANCE + IN_FUSD, "insufficient fUSD allowance");
-
-        require(errorCode != ERR_LOW_BALANCE + IN_COLLATERAL, "insufficient collateral balance");
-
-        require(errorCode != ERR_LOW_ALLOWANCE + IN_COLLATERAL, "insufficient collateral allowance");
-
-        require(errorCode == ERR_NO_ERROR, "unknown error");
-
-    }    
-
-    function fantomMintERC20Balance(address _token) public view returns (uint256){
-        uint256 balance = ERC20(_token).balanceOf(fantomMintContract);
-        return balance;
-    }
-
-    function _bidAuction(address _collateralOwner, address _token, uint256 amount) internal returns (uint256) {
-        require(auctionIndex[_collateralOwner] > 0, "Target Collateral is not in Auction.");
-        require(liquidatedVault[_collateralOwner][_token] >= amount, "Collateral is not sufficient to buy.");
-
-        AuctionInformation storage _auction = auctionList[_collateralOwner];
-        
-       // uint256 timeDiff = block.timestamp - _auction.startTime;
-        uint256 timeDiff = block.timestamp.sub(_auction.startTime);
-        //uint256 currentRound = timeDiff / _auction.intervalTime;
-        uint256 currentRound = timeDiff.div(_auction.intervalTime);
-        //uint256 currentPrice = _auction.startPrice - currentRound * _auction.intervalPrice;
-        uint256 currentPrice = _auction.startPrice.add(currentRound.mul(_auction.intervalPrice));
-
-        uint256 buyValue = getCollateralPool().tokenValue(_token, amount);
-        uint256 debtValue = buyValue
-            .mul(10000)
-            .div(currentPrice);
-        
-        // make sure caller has enough fUSD to cover the collateral
-        if (debtValue >= ERC20(fantomUSD).balanceOf(msg.sender)) {
-            return ERR_LOW_BALANCE + IN_FUSD;
+        uint index;
+        for (index = 0; index < _auction.debtList.length; index++) {
+            uint debtAmount = _auction.debtValue[_auction.debtList[index]].mul(_percentage).div(percentPrecision);
+            require(debtAmount <= ERC20(_auction.debtList[index]).allowance(msg.sender, address(this)),
+                "Low allowance of debt token."
+            );
+            ERC20(_auction.debtList[index]).safeTransferFrom(msg.sender, fantomFeeVault, debtAmount);
+            _auction.debtValue[_auction.debtList[index]] = _auction.debtValue[_auction.debtList[index]].sub(debtAmount);
         }
         
-        // make sure we are allowed to transfer fUSD from the caller
-        // to the liqudation pool.
-        //if (debtValue >= ERC20(fantomUSD).allowance(msg.sender, address(this))) {
-        if (debtValue > ERC20(fantomUSD).allowance(msg.sender, address(this))) {
-            return ERR_LOW_ALLOWANCE + IN_FUSD;
-        }
-        
-        // make sure the collateral is sufficient to buy
-        //if (amount >= ERC20(_token).balanceOf(collateralContract)) {
-        if (amount > ERC20(_token).balanceOf(fantomMintContract)) {
-            return ERR_LOW_BALANCE + IN_COLLATERAL;
-        }
-        
-        // make sure we are allowed to transfer the collateral from the collateral contract
-        // to the buyer
-        //if (amount >= ERC20(_token).allowance(collateralContract, msg.sender)) {
-        /* if (amount > ERC20(_token).allowance(fantomMintContract, msg.sender)) {
-            return ERR_LOW_ALLOWANCE + IN_COLLATERAL;
-        } */
-        FantomMint(fantomMintContract).settleLiquidationBid(_token, msg.sender, amount);
-        
-        ERC20(fantomUSD).safeTransferFrom(msg.sender, address(this), debtValue);
-        
-        //ERC20(_token).safeTransferFrom(collateralContract, msg.sender, amount);
-        //ERC20(_token).safeTransferFrom(fantomMintContract, msg.sender, amount);
-
-        
-        //liquidatedVault[_collateralOwner][_token] -= amount;
-        liquidatedVault[_collateralOwner][_token] = liquidatedVault[_collateralOwner][_token].sub(amount);
-
-        emit Withdrawn(_token, msg.sender, amount);
-
-        // Check if auction is finished or not
-        bool auctionEnded = false;
-
-        if (liquidatedVault[_collateralOwner][_token] == 0) {
-            auctionEnded = balanceOfRemainingCollateral(_collateralOwner) > 0;
+        uint collateralPercent = calculateCollateralRatio(_auction.remainingPercent, offeringRatio, _auction.debtPercent, _percentage);
+        return;
+        for (index = 0; index < _auction.collateralList.length; index++) {
+            uint collatAmount = _auction.collateralValue[_auction.collateralList[index]]
+                .mul(collateralPercent).div(percentPrecision);
+            require(collatAmount <= ERC20(_auction.collateralList[index]).allowance(collateralContract, address(this)),
+                "Low allowance of collateral token."
+            );
+            ERC20(_auction.collateralList[index]).safeTransferFrom(collateralContract, msg.sender, collatAmount);
+            _auction.collateralValue[_auction.collateralList[index]] = _auction.collateralValue[_auction.collateralList[index]].sub(collatAmount);
         }
 
-        if (auctionEnded) {
-            uint indexOfArray = auctionIndex[_collateralOwner];
-            if (indexOfArray == collateralOwners.length) {
-                auctionIndex[_collateralOwner] = 0;
-                collateralOwners.pop();
-            } else {
-                collateralOwners[indexOfArray - 1] = collateralOwners[collateralOwners.length - 1];
-                collateralOwners.pop();
-                auctionIndex[collateralOwners[indexOfArray - 1]] = indexOfArray;
+        _auction.debtPercent = _auction.debtPercent.sub(_auction.debtPercent.mul(_percentage).div(percentPrecision));
+        _auction.remainingPercent = _auction.remainingPercent.sub(_auction.remainingPercent.mul(collateralPercent).div(percentPrecision));
+        if (_auction.debtPercent == 0) {
+            // Auction ended
+            for (index = 0; index < _auction.collateralList.length; index++) {
+                uint collatAmount = _auction.collateralValue[_auction.collateralList[index]];
+                require(collatAmount <= ERC20(_auction.collateralList[index]).allowance(collateralContract, address(this)),
+                    "Low allowance of collateral token."
+                );
+                ERC20(_auction.collateralList[index]).safeTransferFrom(collateralContract, _auction.owner, collatAmount);
+                _auction.collateralValue[_auction.collateralList[index]] = 0;
             }
+            uint replaceNonce = auctionList[auctionList.length - 1].nonce;
+            auctionIndexer[replaceNonce] = auctionIndexer[_nonce];
+            auctionList[auctionIndexer[_nonce] - 1] = auctionList[auctionList.length - 1];
+            auctionList.pop();
+            auctionIndexer[_nonce] = 0;
         }
-        return ERR_NO_ERROR;
     }
 
-    function getAuctionResource(address _collateralOwner) public returns (address[] memory, uint256[] memory) {
-        uint256[] memory amounts = new uint256[](getCollateralPool().tokensCount());
-        for (uint i = 0; i < getCollateralPool().tokensCount(); i++) {
-            address _token = getCollateralPool().tokens(i);
-            amounts[i] = liquidatedVault[_collateralOwner][_token];
-        }
-        return (getCollateralPool().getTokens(), amounts);
+    function getDebtValue (address _targetAddress) external view returns(uint256){
+        return getDebtPool().totalOf(_targetAddress);
     }
-
-    function startLiquidation(address targetAddress) external auth {
+    function startLiquidation(address _targetAddress) external nonReentrant auth {
         require(live, "Liquidation not live");
         // get the collateral pool
-        IFantomDeFiTokenStorage pool = getCollateralPool();
+        IFantomDeFiTokenStorage collateralPool = getCollateralPool();
         // get the debt pool
         IFantomDeFiTokenStorage debtPool = getDebtPool();
 
-        require(!collateralIsEligible(targetAddress), "Collateral is not eligible for liquidation");
+        require(!collateralIsEligible(_targetAddress), "Collateral is not eligible for liquidation");
 
-        require(pool.totalOf(targetAddress) > 0, "The value of the collateral is 0");
+        require(collateralPool.totalOf(_targetAddress) > 0, "The value of the collateral is 0");
 
-        addressProvider.getRewardDistribution().rewardUpdate(targetAddress);
+        addressProvider.getRewardDistribution().rewardUpdate(_targetAddress);
 
-        uint256 debtValue = getDebtPool().totalOf(targetAddress);
+        uint debtValue = getDebtPool().totalOf(_targetAddress);
 
         require(debtValue >= minDebtValue, "The value of the debt is less than the minimum debt value");
-        
+
+        AuctionInformation memory _tempAuction;
+        _tempAuction.owner = _targetAddress;
+        _tempAuction.round = 1;
+        _tempAuction.startPrice = auctionBeginPrice;
+        _tempAuction.intervalPrice = intervalPriceDiff;
+        _tempAuction.minPrice = defaultMinPrice;
+        _tempAuction.startTime = block.timestamp;
+        _tempAuction.intervalTime = intervalTimeDiff;
+        _tempAuction.endTime = block.timestamp + auctionDuration;
+        _tempAuction.remainingPercent = percentPrecision;
+        _tempAuction.debtPercent = percentPrecision;
+
+        auctionList.push(_tempAuction);
+
+        AuctionInformation storage _auction = auctionList[auctionList.length - 1];
+
         uint index;
-        for (index = 0; index < pool.tokensCount(); index++) {
-            uint256 collatBalance = pool.balanceOf(targetAddress, pool.tokens(index));
-            //liquidatedVault[targetAddress][pool.tokens(index)] += collatBalance;
-            liquidatedVault[targetAddress][pool.tokens(index)] = liquidatedVault[targetAddress][pool.tokens(index)].add(collatBalance);
-            pool.sub(targetAddress, pool.tokens(index), collatBalance);
+        uint tokenCount;
+        address tokenAddress;
+        uint tokenBalance;
+        tokenCount = collateralPool.tokensCount();
+        for (index = 0; index < tokenCount; index++) {
+            tokenAddress = collateralPool.getToken(index);
+            tokenBalance = collateralPool.balanceOf(_targetAddress, tokenAddress);
+            if (tokenBalance > 0) {
+                collateralPool.sub(_targetAddress, tokenAddress, tokenBalance);
+                _auction.collateralList.push(tokenAddress);
+                _auction.collateralValue[tokenAddress] = tokenBalance;
+            }
         }
-
-        for (index = 0; index < debtPool.tokensCount(); index++) {
-            uint256 debtBalance = debtPool.balanceOf(targetAddress, debtPool.tokens(index));
-            debtPool.sub(targetAddress, debtPool.tokens(index), debtBalance);
-        }
-
-        if (auctionIndex[targetAddress] == 0) {
-            collateralOwners.push(targetAddress);
-            auctionIndex[targetAddress] = collateralOwners.length;
-        }
-
-        startAuction(targetAddress);
-    }
-
-    function startAuction(address _collateralOwner) internal {
-        AuctionInformation memory _auction;
-        _auction.owner = _collateralOwner;
-        _auction.round = 1;
-        _auction.startPrice = auctionBeginPrice;
-        _auction.intervalPrice = intervalPriceDiff;
-        _auction.minPrice = defaultMinPrice;
-        _auction.startTime = now;
-        _auction.intervalTime = intervalTimeDiff;
-        _auction.endTime = now + 60000;
         
-        auctionList[_collateralOwner] = _auction;
+        tokenCount = debtPool.tokensCount();
+        for (index = 0; index < tokenCount; index++) {
+            tokenAddress = debtPool.getToken(index);
+            tokenBalance = debtPool.balanceOf(_targetAddress, tokenAddress);
+            if (tokenBalance > 0) {
+                debtPool.sub(_targetAddress, tokenAddress, tokenBalance);
+                _auction.debtList.push(tokenAddress);
+                _auction.debtValue[tokenAddress] = tokenBalance.mul(101).div(100);
+            }
+        }
 
-        emit AuctionStarted(_collateralOwner);
+        totalNonce += 1;
+        _auction.nonce = totalNonce;
+
+        auctionIndexer[totalNonce] = auctionList.length;
+
+        emit AuctionStarted(totalNonce, _targetAddress);
     }
 
     function updateLiquidationFlag(bool _live) external auth {
