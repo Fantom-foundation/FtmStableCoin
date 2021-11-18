@@ -7,6 +7,7 @@ const {
 const FantomLiquidationManager = artifacts.require('FantomLiquidationManager');
 const FantomMintTokenRegistry = artifacts.require('FantomMintTokenRegistry');
 const FantomDeFiTokenStorage = artifacts.require('FantomDeFiTokenStorage');
+const FantomDeFiTokenStorage2 = artifacts.require('FantomDeFiTokenStorage');
 const FantomMint = artifacts.require('FantomMint');
 const FantomMintAddressProvider = artifacts.require(
   'FantomMintAddressProvider'
@@ -17,6 +18,14 @@ const FantomMintRewardDistribution = artifacts.require(
 const FantomFUSD = artifacts.require('FantomFUSD');
 const MockToken = artifacts.require('MockToken');
 const MockPriceOracleProxy = artifacts.require('MockPriceOracleProxy');
+
+const FantomProxyAdmin = artifacts.require('FantomProxyAdmin');
+const FantomLiquidationManagerImpl = artifacts.require(
+  'FantomLiquidationManager'
+);
+const FantomLiquidationManagerProxy = artifacts.require(
+  'FantomUpgradeabilityProxy'
+);
 
 const etherToWei = (n) => {
   return new web3.utils.BN(web3.utils.toWei(n.toString(), 'ether'));
@@ -46,6 +55,35 @@ module.exports = async function(deployer, network, accounts) {
       fantomMintAddressProvider.address
     );
 
+    await deployer.deploy(FantomProxyAdmin);
+    const fantomProxyAdmin = await FantomProxyAdmin.deployed();
+
+    let PROXY_ADMIN_ADDRESS;
+    switch (network) {
+      case 'mainnet':
+        PROXY_ADMIN_ADDRESS = '0x???'; //TODO: get the correct one
+        break;
+      default:
+        PROXY_ADMIN_ADDRESS = fantomProxyAdmin.address;
+        break;
+    }
+
+    await deployer.deploy(FantomLiquidationManagerImpl);
+    const fantomLiquidationManagerImpl = await FantomLiquidationManagerImpl.deployed();
+
+    await deployer.deploy(
+      FantomLiquidationManagerProxy,
+      fantomLiquidationManagerImpl.address,
+      PROXY_ADMIN_ADDRESS,
+      []
+    );
+    const fantomLiquidationManagerProxy = await FantomLiquidationManagerProxy.deployed();
+    // TODO: what is the equivalent to line 86 - line 95 in deploy_all.js
+    // await fantomLiquidationManagerProxy.initialize(
+    //   owner,
+    //   fantomMintAddressProvider.address
+    // );
+
     await deployer.deploy(FantomMint);
     const fantomMint = await FantomMint.deployed();
     await fantomMint.initialize(owner, fantomMintAddressProvider.address);
@@ -58,13 +96,14 @@ module.exports = async function(deployer, network, accounts) {
     const collateralPool = await FantomDeFiTokenStorage.deployed();
     await collateralPool.initialize(fantomMintAddressProvider.address, true);
 
-    await deployer.deploy(FantomDeFiTokenStorage);
-    const debtPool = await FantomDeFiTokenStorage.deployed();
+    await deployer.deploy(FantomDeFiTokenStorage2);
+    const debtPool = await FantomDeFiTokenStorage2.deployed();
     await debtPool.initialize(fantomMintAddressProvider.address, true);
 
     await deployer.deploy(FantomFUSD);
     const fantomFUSD = await FantomFUSD.deployed();
-    await fantomFUSD.initialize(owner);
+    //await fantomFUSD.initialize(owner);
+    await fantomFUSD.init(owner);
 
     await deployer.deploy(FantomMintRewardDistribution);
     const fantomMintRewardDistribution = await FantomMintRewardDistribution.deployed();
