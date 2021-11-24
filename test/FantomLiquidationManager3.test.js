@@ -299,11 +299,18 @@ contract('Unit Test for FantomLiquidationManager', function([
       });
 
       console.log(`
+            Now the borrower withdraws all his collateral`);
+      await this.fantomMint.mustWithdraw(
+        this.mockToken.address,
+        etherToWei(9999),
+        { from: borrower }
+      );
+      console.log(`
             *The amount of wFTM that borrower has should be 9999 again`);
       balance = await this.mockToken.balanceOf(borrower);
       console.log(`
             wFTM balance of borrower after repayment: ${weiToEther(balance)}`);
-      //expect(weiToEther(balance).toString()).to.be.equal('9999');
+      expect(weiToEther(balance).toString()).to.be.equal('9999');
 
       balance = await this.fantomFUSD.balanceOf(borrower);
       console.log(`
