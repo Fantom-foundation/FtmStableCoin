@@ -211,9 +211,15 @@ contract FantomLiquidationManager is
         return
             addressProvider.getFantomMint().checkCollateralCanDecrease(
                 _account,
-                getCollateralPool().getToken(0),
+                //getCollateralPool().getToken(1),
+                0x4A2d103709194EA2fC2251a5596c1e79361c5F85,
+                //getCollateralPool().getToken(0)         ,
                 0
             );
+    }
+
+    function getCollateralPoolToken0() public view returns (address) {
+        return getCollateralPool().getToken(0);
     }
 
     function getLiquidationDetails(uint256 _nonce)
@@ -352,14 +358,18 @@ contract FantomLiquidationManager is
                     ),
                 "Low allowance of debt token."
             );
-            ERC20(_auction.debtList[index]).safeTransferFrom(
+            ERC20Burnable(_auction.debtList[index]).burnFrom(
+                msg.sender,
+                debtAmount
+            );
+            /* ERC20(_auction.debtList[index]).safeTransferFrom(
                 msg.sender,
                 fantomFeeVault,
                 debtAmount
             );
             _auction.debtValue[_auction.debtList[index]] = _auction
                 .debtValue[_auction.debtList[index]]
-                .sub(debtAmount);
+                .sub(debtAmount); */
         }
 
         uint256 collateralPercent = actualPercentage.mul(offeringRatio).div(

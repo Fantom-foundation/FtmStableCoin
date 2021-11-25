@@ -414,7 +414,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             The actual amount of fUSD that bidder2 has spent is ${balance3}`);
 
-      console.log(`
+      /* console.log(`
             Check the amount of fUSD that fantomFeeVault has`);
       let balance4 = await this.fantomFUSD.balanceOf(fantomFeeVault);
 
@@ -427,7 +427,7 @@ contract('Unit Test for FantomLiquidationManager', function([
             *The fUSD fantomFeeVault's balance should be the same as total of fUSDs paid by bidder1 and bidder2`);
       expect((balance2 + balance3).toFixed(3)).to.be.equal(
         (weiToEther(balance4) * 1).toFixed(3)
-      );
+      ); */
 
       console.log(`
             Check the amount of wFTM that bidder1 receives`);
@@ -708,7 +708,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             The actual amount of fUSD that bidder1 has spent is ${balance2}`);
 
-      console.log(`
+      /*  console.log(`
             Check the amount of fUSD that fantomFeeVault has`);
       balance = await this.fantomFUSD.balanceOf(fantomFeeVault);
 
@@ -721,7 +721,7 @@ contract('Unit Test for FantomLiquidationManager', function([
             *The two amounts should be the same`);
       expect(balance2.toFixed(3)).to.be.equal(
         (weiToEther(balance) * 1).toFixed(3)
-      );
+      ); */
 
       console.log(`
             Check the amount of wFTM that bidder1 receives`);

@@ -44,6 +44,7 @@ contract('Unit Test for FantomLiquidationManager', function([
   owner,
   admin,
   borrower,
+  borrower2,
   bidder1,
   bidder2,
   fantomFeeVault
@@ -194,9 +195,9 @@ contract('Unit Test for FantomLiquidationManager', function([
   });
 
   describe('depositing collateral and minting fUSD', function() {
-    it('Scenario 8', async function() {
+  /*   it('Scenario 8', async function() {
       console.log(`
-            Scenario 4:
+            Scenario 8:
             Borrower approves and deposits 9999 wFTMs, 
             Then mints possible max amount of fUSD,
             Borrower decides to repay all the debt and get his 9999 wFTMs back
@@ -236,6 +237,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       await this.fantomMint.mustMintMax(this.fantomFUSD.address, 32000, {
         from: borrower
       });
+
       console.log(`
             *Now borrower should have fUSD between 0 and 3333`);
       let amount = await this.fantomFUSD.balanceOf(borrower);
@@ -315,6 +317,132 @@ contract('Unit Test for FantomLiquidationManager', function([
       balance = await this.fantomFUSD.balanceOf(borrower);
       console.log(`
             fUSD balance of borrower after repayment: ${weiToEther(balance)}`);
+    }); */
+
+    it('Scenario 9', async function() {
+      console.log(`
+            Scenario 9:
+            Borrower approves and deposits 9999 wFTMs, 
+            Borrower2 approves and deposits 9999 wFTM2s, 
+            Then mints possible max amount of fUSD,
+            The price of wFTM2 drops to 0.5 USD,
+            The liquidation of borrower2's collateral starts"
+            `);
+
+      console.log('');
+      console.log(`
+            Mint 9999 wFTMs for the borrower so he/she can borrow some fUSD`);
+      await this.mockToken.mint(borrower, etherToWei(9999));
+
+      console.log(`
+            Mint 9999 wFTM2s for the borrower2 so he/she can borrow some fUSD`);
+      await this.mockToken2.mint(borrower2, etherToWei(9999));
+
+      console.log(`
+            Mint bidder1 10000 fUSDs to bid for the liquidated collateral`);
+      await this.fantomFUSD.mint(bidder1, etherToWei(10000), { from: owner });
+
+      console.log(`
+            Borrower approves 9999 wFTM to FantomMint contract`);
+      await this.mockToken.approve(this.fantomMint.address, etherToWei(9999), {
+        from: borrower
+      });
+
+      console.log(`
+            Borrower2 approves 9999 wFTM2 to FantomMint contract`);
+      await this.mockToken2.approve(this.fantomMint.address, etherToWei(9999), {
+        from: borrower2
+      });
+
+      console.log(`
+            Borrower deposits all his/her 9999 wFTMs`);
+      await this.fantomMint.mustDeposit(
+        this.mockToken.address,
+        etherToWei(9999),
+        { from: borrower }
+      );
+
+      console.log(`
+            Borrower2 deposits all his/her 9999 wFTM2s`);
+      await this.fantomMint.mustDeposit(
+        this.mockToken2.address,
+        etherToWei(9999),
+        { from: borrower2 }
+      );
+
+      console.log(`
+            *Now the borrower should have 0 wFTM`);
+      let balance = await this.mockToken.balanceOf(borrower);
+      expect(balance).to.be.bignumber.equal('0');
+
+      console.log(`
+            *Now the borrower2 should have 0 wFTM2`);
+      balance = await this.mockToken2.balanceOf(borrower2);
+      expect(balance).to.be.bignumber.equal('0');
+
+      console.log(`
+            Mint the maximum amount of fUSD for the borrower`);
+      await this.fantomMint.mustMintMax(this.fantomFUSD.address, 32000, {
+        from: borrower
+      });
+
+      console.log(`
+            Mint the maximum amount of fUSD for the borrower2`);
+      await this.fantomMint.mustMintMax(this.fantomFUSD.address, 32000, {
+        from: borrower2
+      });
+
+      console.log(`
+            *Now borrower should have fUSD between 0 and 3333`);
+      let amount = await this.fantomFUSD.balanceOf(borrower);
+      expect(amount).to.be.bignumber.greaterThan('0');
+      expect(weiToEther(amount) * 1).to.be.lessThanOrEqual(3333);
+      console.log(
+        `
+            The actual amount of fUSD minted for borrower: `,
+        weiToEther(amount)
+      );
+
+      console.log(`
+            *Now borrower2 should have fUSD between 0 and 3333`);
+      amount = await this.fantomFUSD.balanceOf(borrower2);
+      expect(amount).to.be.bignumber.greaterThan('0');
+      expect(weiToEther(amount) * 1).to.be.lessThanOrEqual(3333);
+      console.log(
+        `
+            The actual amount of fUSD minted for borrower2: `,
+        weiToEther(amount)
+      );
+
+      console.log(`
+            Let's set the price of wFTM2 to 0.5 USD`);
+      await this.mockPriceOracleProxy.setPrice(
+        this.mockToken2.address,
+        etherToWei(0.5)
+      );
+
+      console.log(`
+            An admin starts the liquidation of borrower2's collateral`);
+      let result = await this.fantomLiquidationManager.startLiquidation(
+        borrower2,
+        { from: admin }
+      );
+
+      console.log(`
+            Let's set the price of wFTM to 0.5 USD`);
+      await this.mockPriceOracleProxy.setPrice(
+        this.mockToken.address,
+        etherToWei(0.5)
+      );
+
+      console.log(`
+            An admin starts the liquidation of borrower's collateral`);
+      result = await this.fantomLiquidationManager.startLiquidation(
+        borrower,
+        { from: admin }
+      );
+
+
     });
   });
 });
