@@ -35,11 +35,6 @@ const etherToWei = (n) => {
   return new web3.utils.BN(web3.utils.toWei(n.toString(), 'ether'));
 };
 
-console.log(`
-Notes:
-- The amount of the collateral that bidders receive don't seem correct. The borrower seem
-  to be refunded too much.`);
-
 contract('Unit Test for FantomLiquidationManager', function([
   owner,
   admin,
@@ -190,19 +185,12 @@ contract('Unit Test for FantomLiquidationManager', function([
       from: owner
     });
 
+    await this.fantomLiquidationManager.updateInitiatorBonus(etherToWei(0.5));
+
     /** all the necesary setup */
   });
 
   describe('depositing collateral and minting fUSD', function() {
-    /*  it('gets the price of wFTM', async function() {
-            // check the initial value of wFTM
-            const price = await this.mockPriceOracleProxy.getPrice(this.mockToken.address);
-            console.log(`
-            *The price of wFTM should be ${weiToEther(price)} USD`);
-            //console.log(weiToEther(price));
-            expect(weiToEther(price).toString()).to.be.equal('1');        
-        }) */
-
     it('Scenario 4', async function() {
       console.log(`
             Scenario 4:
@@ -363,7 +351,8 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Bidder1 bids 25% of the collateral`);
       await this.fantomLiquidationManager.bidAuction(1, new BN('25000000'), {
-        from: bidder1
+        from: bidder1,
+        value: etherToWei(0.5)
       });
 
       console.log(`
@@ -394,7 +383,8 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Bidder2 bids the rest of the collateral`);
       await this.fantomLiquidationManager.bidAuction(1, new BN('100000000'), {
-        from: bidder2
+        from: bidder2,
+        value: etherToWei(0.5)
       });
 
       console.log(`
@@ -413,21 +403,6 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       console.log(`
             The actual amount of fUSD that bidder2 has spent is ${balance3}`);
-
-      /* console.log(`
-            Check the amount of fUSD that fantomFeeVault has`);
-      let balance4 = await this.fantomFUSD.balanceOf(fantomFeeVault);
-
-      console.log(`
-            The actual balance of fantomFeeVault's fUSD now: ${weiToEther(
-              balance4
-            )}`);
-
-      console.log(`
-            *The fUSD fantomFeeVault's balance should be the same as total of fUSDs paid by bidder1 and bidder2`);
-      expect((balance2 + balance3).toFixed(3)).to.be.equal(
-        (weiToEther(balance4) * 1).toFixed(3)
-      ); */
 
       console.log(`
             Check the amount of wFTM that bidder1 receives`);
@@ -565,7 +540,6 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       console.log(`
             Fast forward 10 hours`);
-      //await time.increase(10*60*60);
       await this.fantomLiquidationManager.increaseTime(10 * 60 * 60);
 
       console.log(`
@@ -688,7 +662,8 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Bidder1 bids  the wFTM2 collateral`);
       await this.fantomLiquidationManager.bidAuction(1, new BN('100000000'), {
-        from: bidder1
+        from: bidder1,
+        value: etherToWei(0.5)
       });
 
       console.log(`
@@ -707,21 +682,6 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       console.log(`
             The actual amount of fUSD that bidder1 has spent is ${balance2}`);
-
-      /*  console.log(`
-            Check the amount of fUSD that fantomFeeVault has`);
-      balance = await this.fantomFUSD.balanceOf(fantomFeeVault);
-
-      console.log(`
-            The actual balance of fantomFeeVault's fUSD now: ${weiToEther(
-              balance
-            )}`);
-
-      console.log(`
-            *The two amounts should be the same`);
-      expect(balance2.toFixed(3)).to.be.equal(
-        (weiToEther(balance) * 1).toFixed(3)
-      ); */
 
       console.log(`
             Check the amount of wFTM that bidder1 receives`);

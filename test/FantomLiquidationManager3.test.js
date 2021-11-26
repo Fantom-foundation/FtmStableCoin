@@ -35,11 +35,6 @@ const etherToWei = (n) => {
   return new web3.utils.BN(web3.utils.toWei(n.toString(), 'ether'));
 };
 
-console.log(`
-Notes:
-- The amount of the collateral that bidders receive don't seem correct. The borrower seem
-  to be refunded too much.`);
-
 contract('Unit Test for FantomLiquidationManager', function([
   owner,
   admin,
@@ -191,11 +186,13 @@ contract('Unit Test for FantomLiquidationManager', function([
       from: owner
     });
 
+    await this.fantomLiquidationManager.updateInitiatorBonus(etherToWei(0.5));
+
     /** all the necesary setup */
   });
 
   describe('depositing collateral and minting fUSD', function() {
-  /*   it('Scenario 8', async function() {
+    it('Scenario 8', async function() {
       console.log(`
             Scenario 8:
             Borrower approves and deposits 9999 wFTMs, 
@@ -317,7 +314,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       balance = await this.fantomFUSD.balanceOf(borrower);
       console.log(`
             fUSD balance of borrower after repayment: ${weiToEther(balance)}`);
-    }); */
+    });
 
     it('Scenario 9', async function() {
       console.log(`
@@ -437,12 +434,9 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       console.log(`
             An admin starts the liquidation of borrower's collateral`);
-      result = await this.fantomLiquidationManager.startLiquidation(
-        borrower,
-        { from: admin }
-      );
-
-
+      result = await this.fantomLiquidationManager.startLiquidation(borrower, {
+        from: admin
+      });
     });
   });
 });

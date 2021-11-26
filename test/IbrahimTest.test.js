@@ -182,6 +182,8 @@ contract('FantomLiquidationManager', function([
     });
 
     await this.fantomLiquidationManager.addAdmin(admin, { from: owner });
+
+    await this.fantomLiquidationManager.updateInitiatorBonus(etherToWei(0.5));
   });
 
   describe('Deposit Collateral', function() {

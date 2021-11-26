@@ -36,11 +36,6 @@ const etherToWei = (n) => {
   return new web3.utils.BN(web3.utils.toWei(n.toString(), 'ether'));
 };
 
-console.log(`
-Notes:
-- The amount of the collateral that bidders receive don't seem correct. The borrower seem
-  to be refunded too much.`);
-
 contract('Unit Test for FantomLiquidationManager', function([
   owner,
   admin,
@@ -205,7 +200,8 @@ contract('Unit Test for FantomLiquidationManager', function([
             Borrower approves and deposits 9999 wFTM, 
             Then mints possible max amount of fUSD,
             The price of the wFTM changes from 1 to 0.5,
-            A smart contract tries to start the liquidation but it will fail`);
+            A smart contract tries to start the liquidation 
+            but it will fail with "Smart Contract not allowed"`);
 
       console.log('');
       console.log(`
@@ -259,7 +255,8 @@ contract('Unit Test for FantomLiquidationManager', function([
       );
 
       console.log(`
-            A smart contract tries to start the liquidation`);
+            *A smart contract tries to start the liquidation 
+            but it fail with "Smart Contract not allowed"`);
 
       await expectRevert(
         this.mockStartLiquidation.startLiquidation(

@@ -35,11 +35,6 @@ const etherToWei = (n) => {
   return new web3.utils.BN(web3.utils.toWei(n.toString(), 'ether'));
 };
 
-console.log(`
-Notes:
-- The amount of the collateral that bidders receive don't seem correct. The borrower seem
-  to be refunded too much.`);
-
 contract('Unit Test for FantomLiquidationManager', function([
   owner,
   admin,
@@ -197,15 +192,6 @@ contract('Unit Test for FantomLiquidationManager', function([
   });
 
   describe('depositing collateral and minting fUSD', function() {
-    /*  it('gets the price of wFTM', async function() {
-            // check the initial value of wFTM
-            const price = await this.mockPriceOracleProxy.getPrice(this.mockToken.address);
-            console.log(`
-            *The price of wFTM should be ${weiToEther(price)} USD`);
-            //console.log(weiToEther(price));
-            expect(weiToEther(price).toString()).to.be.equal('1');        
-        }) */
-
     it('Scenario 1', async function() {
       console.log(`
             Scenario 1:
@@ -266,15 +252,11 @@ contract('Unit Test for FantomLiquidationManager', function([
         etherToWei(0.5)
       );
 
-      /*       console.log(`
-            An admin starts the liquidation`);
- */
-
       console.log(`
             Somebody starts the liquidation`);
+
       let result = await this.fantomLiquidationManager.startLiquidation(
         borrower,
-        //{ from: admin }
         { from: liquidationStarter }
       );
 
@@ -301,10 +283,48 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       console.log(`
             Bidder1 bids all the collateral`);
+      console.log(`
+            Let's check bidder1's FTM balance before bidding`);
+      let balance1 = await web3.eth.getBalance(bidder1);
+      console.log(`
+            FTM balance of bidder1 before bidding: ${weiToEther(balance1)}`);
+
+      console.log(`
+            Let's check the initiator's FTM balance before bidding`);
+      let balance2 = await web3.eth.getBalance(liquidationStarter);
+      console.log(`
+            FTM balance of initiator before bidding: ${weiToEther(balance2)}`);
+
       await this.fantomLiquidationManager.bidAuction(1, new BN('100000000'), {
         from: bidder1,
         value: etherToWei(0.5)
       });
+
+      console.log(`
+            Let's check bidder1's FTM balance after bidding`);
+      let balance3 = await web3.eth.getBalance(bidder1);
+      console.log(`
+            FTM balance of bidder1 after bidding: ${weiToEther(balance3)}`);
+
+      console.log(`
+            Let's check the initiator's FTM balance after bidding`);
+      let balance4 = await web3.eth.getBalance(liquidationStarter);
+      console.log(`
+            FTM balance of initiator after bidding: ${weiToEther(balance4)}`);
+
+      console.log(`
+            *Bidder1 should have 0.5 FTM less now`);
+      expect(
+        (weiToEther(balance3) * 1).toFixed(2) -
+          (weiToEther(balance1) * 1).toFixed(2)
+      ).to.be.equal(-0.5);
+
+      console.log(`
+          *Initiator should have 0.5 FTM more now`);
+      expect(
+        (weiToEther(balance4) * 1).toFixed(2) -
+          (weiToEther(balance2) * 1).toFixed(2)
+      ).to.be.equal(0.5);
 
       console.log(`
             *Bidder1's fUSD balance should be less than 10000`);
@@ -318,7 +338,7 @@ contract('Unit Test for FantomLiquidationManager', function([
             The amount of fUSD that bidder1 has spent is 10000 minus ${weiToEther(
               balance
             )}`);
-      let balance2 = 10000 - weiToEther(balance);
+      balance2 = 10000 - weiToEther(balance);
 
       console.log(`
             The actual amount of fUSD that bidder1 has spent is ${balance2}`);
@@ -350,13 +370,9 @@ contract('Unit Test for FantomLiquidationManager', function([
             The total supply of FUSD after bidder1 bids: ${weiToEther(
               totalSupply
             )}`);
-
-      /*       let balance = await web3.eth.getBalance(borrower);
-      console.log(weiToEther(balance));
- */
     });
 
-    /*   it('Scenario 2', async function() {
+    it('Scenario 2', async function() {
       console.log(`
             Scenario 2:
             Borrower approves and deposits 9999 wFTM 
@@ -441,7 +457,8 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Bidder1 bids  the collateral`);
       await this.fantomLiquidationManager.bidAuction(1, new BN('50000000'), {
-        from: bidder1
+        from: bidder1,
+        value: etherToWei(0.5)
       });
 
       console.log(`
@@ -487,9 +504,9 @@ contract('Unit Test for FantomLiquidationManager', function([
             *The remaining of collateral with FantomMint should be 4999.5`);
       balance = await this.mockToken.balanceOf(this.fantomMint.address);
       expect(weiToEther(balance) * 1).to.be.equal(4999.5);
-    }); */
+    });
 
-    /*  it('Scenario 3', async function() {
+    it('Scenario 3', async function() {
       console.log(`
             Scenario 3:
             Borrower approves and deposits 9999 wFTM, 
@@ -569,10 +586,11 @@ contract('Unit Test for FantomLiquidationManager', function([
             amount of fUSD to be transferred`);
       await expectRevert(
         this.fantomLiquidationManager.bidAuction(1, new BN('100000000'), {
-          from: bidder1
+          from: bidder1,
+          value: etherToWei(0.5)
         }),
         'Low allowance of debt token.'
       );
-    }); */
+    });
   });
 });
