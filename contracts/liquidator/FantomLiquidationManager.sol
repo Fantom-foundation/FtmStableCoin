@@ -44,6 +44,7 @@ contract FantomLiquidationManager is
 
     struct AuctionInformation {
         address owner;
+        address payable initiator;
         uint256 startTime;
         uint256 intervalTime;
         uint256 endTime;
@@ -85,6 +86,8 @@ contract FantomLiquidationManager is
     uint256 internal pricePrecision;
     uint256 internal percentPrecision;
     uint256 internal auctionDuration;
+
+    uint256 public initiatorBonus;
 
     bool public live;
 
@@ -190,8 +193,17 @@ contract FantomLiquidationManager is
         fantomMintContract = _fantomMintContract;
     }
 
+    function updateInitiatorBonus(uint256 _initatorBonus) external onlyOwner {
+        initiatorBonus = _initatorBonus;
+    }
+
     modifier auth {
         require(admins[msg.sender], "Sender not authorized");
+        _;
+    }
+
+    modifier onlyNotContract() {
+        require(_msgSender() == tx.origin, "Smart Contract not allowed");
         _;
     }
 
@@ -322,8 +334,11 @@ contract FantomLiquidationManager is
 
     function bidAuction(uint256 _nonce, uint256 _percentage)
         public
+        payable
         nonReentrant
     {
+        require(msg.value >= initiatorBonus, "Insufficient funds to bid.");
+
         require(live, "Liquidation not live");
         require(
             auctionIndexer[_nonce].remainingPercentage > 0,
@@ -333,6 +348,12 @@ contract FantomLiquidationManager is
         AuctionInformation storage _auction = auctionIndexer[_nonce];
         if (_percentage > _auction.remainingPercentage) {
             _percentage = _auction.remainingPercentage;
+        }
+
+        if (_auction.remainingPercentage == percentPrecision) {
+            _auction.initiator.call.value(msg.value)("");
+        } else {
+            msg.sender.call.value(msg.value)("");
         }
 
         uint256 actualPercentage = _percentage.mul(percentPrecision).div(
@@ -422,7 +443,7 @@ contract FantomLiquidationManager is
     function startLiquidation(address _targetAddress)
         external
         nonReentrant
-        auth
+        onlyNotContract
     {
         require(live, "Liquidation not live");
         // get the collateral pool
@@ -444,6 +465,7 @@ contract FantomLiquidationManager is
 
         AuctionInformation memory _tempAuction;
         _tempAuction.owner = _targetAddress;
+        _tempAuction.initiator = msg.sender;
         _tempAuction.startPrice = auctionBeginPrice;
         _tempAuction.intervalPrice = intervalPriceDiff;
         _tempAuction.minPrice = defaultMinPrice;
