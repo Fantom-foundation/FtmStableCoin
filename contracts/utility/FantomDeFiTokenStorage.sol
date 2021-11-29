@@ -14,8 +14,7 @@ import "../interfaces/IFantomMintTokenRegistry.sol";
 
 // FantomDeFiTokenStorage implements a token pool used by the Fantom
 // DeFi fMint protocol to track collateral and debt.
-contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
-{
+contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     // define used libs
     using SafeMath for uint256;
     using Address for address;
@@ -28,6 +27,9 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     // addressProvider represents the connection to other fMint contracts.
     IFantomMintAddressProvider public addressProvider;
 
+    // addressProvider represents the connection to other fMint contracts.
+    IFantomMintTokenRegistry public mintTokenRegistry;
+
     // dustAdjustment represents the adjustment added to the value calculation
     // to round the dust
     bool public valueDustAdjustment;
@@ -35,19 +37,30 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     // onlyMinter modifier controls access to sensitive functions
     // to allow only calls from fMint Minter contract.
     modifier onlyMinter() {
-        require(msg.sender == address(addressProvider.getFantomMint()), "token storage access restricted");
+        require(
+            msg.sender == address(addressProvider.getFantomMint()),
+            "token storage access restricted"
+        );
         _;
     }
 
     // onlyMinterOrLiquidationManager modifier controls access to sensitive functions
     // to allow only calls from fMint Minter or fLiquidationManager contract.
     modifier onlyMinterOrLiquidationManager() {
-        require(msg.sender == address(addressProvider.getFantomMint()) || msg.sender == address(addressProvider.getFantomLiquidationManager()), "token storage access restricted"); 
-        _;       
+        require(
+            msg.sender == address(addressProvider.getFantomMint()) ||
+                msg.sender ==
+                address(addressProvider.getFantomLiquidationManager()),
+            "token storage access restricted"
+        );
+        _;
     }
 
     // initialize initializes the instance of the module.
-    function initialize(address _addressProvider, bool _dustAdt) public initializer {
+    function initialize(address _addressProvider, bool _dustAdt)
+        public
+        initializer
+    {
         // keep the address provider connecting contracts together
         addressProvider = IFantomMintAddressProvider(_addressProvider);
 
@@ -74,7 +87,11 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     // -------------------------------------------------------------
 
     // tokenValue returns the value of the given amount of the token specified.
-    function tokenValue(address _token, uint256 _amount) public view returns (uint256 value) {
+    function tokenValue(address _token, uint256 _amount)
+        public
+        view
+        returns (uint256 value)
+    {
         // do not calculate anything on zero amount
         if (_amount == 0) {
             return 0;
@@ -83,7 +100,8 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
         // get the token price and price digits correction
         // NOTE: We may want to cache price decimals to save some gas on subsequent calls.
         uint256 price = addressProvider.getPriceOracleProxy().getPrice(_token);
-        uint256 priceDigitsCorrection = 10 ** uint256(addressProvider.getTokenRegistry().priceDecimals(_token));
+        uint256 priceDigitsCorrection = 10 **
+            uint256(addressProvider.getTokenRegistry().priceDecimals(_token));
 
         // calculate the value and adjust for the dust
         value = _amount.mul(price).div(priceDigitsCorrection);
@@ -99,7 +117,7 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
     // total returns the total value of all the tokens registered inside the storage.
     function total() public view returns (uint256 value) {
         // loop all registered debt tokens
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             // advance the total value by the current debt balance token value
             value = value.add(tokenValue(tokens[i], totalBalance[tokens[i]]));
         }
@@ -115,28 +133,45 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
 
     // totalOfInc returns the value of current balance of an account
     // with specified token balance increased by given amount of tokens.
-    function totalOfInc(address _account, address _token, uint256 _amount) external view returns (uint256 value) {
+    function totalOfInc(
+        address _account,
+        address _token,
+        uint256 _amount
+    ) external view returns (uint256 value) {
         // calculate the total with token balance adjusted up
         return _totalOf(_account, _token, _amount, 0);
     }
 
     // totalOfDec returns the value of current balance of an account
     // with specified token balance decreased by given amount of tokens.
-    function totalOfDec(address _account, address _token, uint256 _amount) external view returns (uint256 value) {
+    function totalOfDec(
+        address _account,
+        address _token,
+        uint256 _amount
+    ) external view returns (uint256 value) {
         // calculate the total with token balance adjusted down
         return _totalOf(_account, _token, 0, _amount);
     }
 
     // balanceOf returns the balance of the given token on the given account.
-    function balanceOf(address _account, address _token) public view returns (uint256) {
+    function balanceOf(address _account, address _token)
+        public
+        view
+        returns (uint256)
+    {
         return balance[_account][_token];
     }
 
     // _totalOf calculates the value of given account with specified token balance adjusted
     // either up, or down, based on given extra values
-    function _totalOf(address _account, address _token, uint256 _add, uint256 _sub) internal view returns (uint256 value) {
+    function _totalOf(
+        address _account,
+        address _token,
+        uint256 _add,
+        uint256 _sub
+    ) internal view returns (uint256 value) {
         // loop all registered debt tokens
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             // advance the result by the value of current token balance of this token.
             // Make sure to stay on safe size with the _sub deduction, we don't
             // want to drop balance to sub-zero amount, that would freak out the SafeMath.
@@ -144,17 +179,25 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
                 // add adjusted token balance converted to value
                 // NOTE: this may revert on underflow if the _sub value exceeds balance,
                 // but it should never happen on normal protocol operations.
-                value = value.add(tokenValue(
+                value = value.add(
+                    tokenValue(
                         tokens[i],
-                        balance[_account][tokens[i]].add(_add).sub(_sub, "token sub exceeds balance")
-                    ));
+                        balance[_account][tokens[i]].add(_add).sub(
+                            _sub,
+                            "token sub exceeds balance"
+                        )
+                    )
+                );
 
                 // we consumed the adjustment and can reset it
                 _add = 0;
                 _sub = 0;
             } else {
+                // if (tokens[i])
                 // simply add the token balance converted to value as-is
-                value = value.add(tokenValue(tokens[i], balance[_account][tokens[i]]));
+                value = value.add(
+                    tokenValue(tokens[i], balance[_account][tokens[i]])
+                );
             }
         }
 
@@ -177,7 +220,11 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
 
     // add adds specified amount of tokens to given account
     // and updates the total supply references.
-    function add(address _account, address _token, uint256 _amount) public onlyMinterOrLiquidationManager {
+    function add(
+        address _account,
+        address _token,
+        uint256 _amount
+    ) public onlyMinterOrLiquidationManager {
         // update the token balance of the account
         balance[_account][_token] = balance[_account][_token].add(_amount);
 
@@ -190,7 +237,11 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage
 
     // sub removes specified amount of tokens from given account
     // and updates the total balance references.
-    function sub(address _account, address _token, uint256 _amount) public onlyMinterOrLiquidationManager {
+    function sub(
+        address _account,
+        address _token,
+        uint256 _amount
+    ) public onlyMinterOrLiquidationManager {
         // update the balance of the account
         balance[_account][_token] = balance[_account][_token].sub(_amount);
 
