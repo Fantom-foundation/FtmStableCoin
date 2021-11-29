@@ -26,10 +26,6 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
 
     // addressProvider represents the connection to other fMint contracts.
     IFantomMintAddressProvider public addressProvider;
-
-    // addressProvider represents the connection to other fMint contracts.
-    IFantomMintTokenRegistry public mintTokenRegistry;
-
     // dustAdjustment represents the adjustment added to the value calculation
     // to round the dust
     bool public valueDustAdjustment;
@@ -193,7 +189,6 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
                 _add = 0;
                 _sub = 0;
             } else {
-                // if (tokens[i])
                 // simply add the token balance converted to value as-is
                 value = value.add(
                     tokenValue(tokens[i], balance[_account][tokens[i]])

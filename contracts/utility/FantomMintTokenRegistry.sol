@@ -7,27 +7,32 @@ import "../interfaces/IFantomMintTokenRegistry.sol";
 import "../interfaces/IERC20Detailed.sol";
 
 /**
-* This utility contract implements an update aware
-* list of tokens used by the Fantom fMint protocol.
-*
-* version 0.1.0
-* license MIT
-* author Fantom Foundation, Jiri Malek
-*/
-contract FantomMintTokenRegistry is Initializable, Ownable, IFantomMintTokenRegistry {
+ * This utility contract implements an update aware
+ * list of tokens used by the Fantom fMint protocol.
+ *
+ * version 0.1.0
+ * license MIT
+ * author Fantom Foundation, Jiri Malek
+ */
+contract FantomMintTokenRegistry is
+    Initializable,
+    Ownable,
+    IFantomMintTokenRegistry
+{
     // TokenInformation represents a single token handled by the registry.
     // The DeFi API uses this reference to do on-chain tokens tracking.
     struct TokenInformation {
-        uint256 id;          // Internal id of the token (index starting from 1)
-        string name;         // Name of the token
-        string symbol;       // symbol of the token
-        uint8 decimals;      // number of decimals of the token
-        string logo;         // URL address of the token logo
-        address oracle;      // address of the token price oracle
+        uint256 id; // Internal id of the token (index starting from 1)
+        string name; // Name of the token
+        string symbol; // symbol of the token
+        uint8 decimals; // number of decimals of the token
+        string logo; // URL address of the token logo
+        address oracle; // address of the token price oracle
         uint8 priceDecimals; // number of decimals the token's price oracle uses
-        bool isActive;       // is this token active in DeFi?
-        bool canDeposit;     // is this token available for deposit?
-        bool canMint;        // is this token available for minting?
+        bool isActive; // is this token active in DeFi?
+        bool canDeposit; // is this token available for deposit?
+        bool canMint; // is this token available for minting?
+        bool isTradable;
     }
 
     // tokens is the mapping between the token address and it's detailed information.
@@ -77,6 +82,11 @@ contract FantomMintTokenRegistry is Initializable, Ownable, IFantomMintTokenRegi
         return tokens[_token].canMint;
     }
 
+    // canTrade informs if the specified token is tradable in Fantom DeFi.
+    function canTrade(address _token) public view returns (bool) {
+        return tokens[_token].isTradable;
+    }
+
     // ---------------------------------
     // tokens management
     // ---------------------------------
@@ -89,7 +99,8 @@ contract FantomMintTokenRegistry is Initializable, Ownable, IFantomMintTokenRegi
         uint8 _priceDecimals,
         bool _isActive,
         bool _canDeposit,
-        bool _canMint
+        bool _canMint,
+        bool _isTradable
     ) external onlyOwner {
         // make sure the token does not exist yet
         require(0 == tokens[_token].id, "token already known");
@@ -106,16 +117,17 @@ contract FantomMintTokenRegistry is Initializable, Ownable, IFantomMintTokenRegi
 
         // create and store the token information
         tokens[_token] = TokenInformation({
-        id : tokensList.length,
-        name : _name,
-        symbol : IERC20Detailed(_token).symbol(),
-        decimals : _decimals,
-        logo : _logo,
-        oracle : _oracle,
-        priceDecimals : _priceDecimals,
-        isActive : _isActive,
-        canDeposit : _canDeposit,
-        canMint : _canMint
+            id: tokensList.length,
+            name: _name,
+            symbol: IERC20Detailed(_token).symbol(),
+            decimals: _decimals,
+            logo: _logo,
+            oracle: _oracle,
+            priceDecimals: _priceDecimals,
+            isActive: _isActive,
+            canDeposit: _canDeposit,
+            canMint: _canMint,
+            isTradable: _isTradable
         });
 
         // inform
