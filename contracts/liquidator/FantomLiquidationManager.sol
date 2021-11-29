@@ -220,7 +220,6 @@ contract FantomLiquidationManager is
     // rewardIsEligible checks if the account is eligible to receive any reward.
     function collateralIsEligible(address _account) public view returns (bool) {
         return
-            //FantomMint(addressProvider.getAddress(MOD_FANTOM_MINT))
             addressProvider.getFantomMint().checkCollateralCanDecrease(
                 _account,
                 getCollateralPool().getToken(0),
