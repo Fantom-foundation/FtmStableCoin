@@ -197,8 +197,7 @@ contract('Unit Test for FantomLiquidationManager', function([
             Scenario 8:
             Borrower approves and deposits 9999 wFTMs, 
             Then mints possible max amount of fUSD,
-            Borrower decides to repay all the debt and get his 9999 wFTMs back
-            The liquidation starts but it will fail with "Collateral is not eligible for liquidation"
+            Borrower decides to repay all the debt and get his 9999 wFTMs back"
             `);
 
       console.log('');

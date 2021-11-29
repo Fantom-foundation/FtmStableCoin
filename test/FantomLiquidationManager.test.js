@@ -313,14 +313,14 @@ contract('Unit Test for FantomLiquidationManager', function([
             FTM balance of initiator after bidding: ${weiToEther(balance4)}`);
 
       console.log(`
-            *Bidder1 should have 0.5 FTM less now`);
+            *Bidder1 should have 0.5 (plus gas fees) FTM less now`);
       expect(
         (weiToEther(balance3) * 1).toFixed(2) -
           (weiToEther(balance1) * 1).toFixed(2)
-      ).to.be.equal(-0.5);
+      ).to.be.lessThanOrEqual(-0.5);
 
       console.log(`
-          *Initiator should have 0.5 FTM more now`);
+            *Initiator should have 0.5 FTM more now`);
       expect(
         (weiToEther(balance4) * 1).toFixed(2) -
           (weiToEther(balance2) * 1).toFixed(2)
