@@ -207,15 +207,18 @@ contract FantomMintBalanceGuard is
             return 0;
         }
 
+        // what's the largest possible debt value allowed?
+        uint256 maxDebtValue = cCollateralValue
+            .sub(minCollateralValue)
+            .mul(collateralRatioDecimalsCorrection)
+            .div(_ratio);
+
+        if (maxDebtValue == 0) {
+            return 0;
+        }
+
         // what's the largest possible debt amount allowed?
-        return
-            cCollateralValue
-                .sub(minCollateralValue)
-                .mul(collateralRatioDecimalsCorrection)
-                .div(getCollateralLowestDebtRatio4dec())
-                .sub(1)
-                .mul(_digits)
-                .div(_price);
+        return maxDebtValue.sub(1).mul(_digits).div(_price);
     }
 
     // -------------------------------------------------------------

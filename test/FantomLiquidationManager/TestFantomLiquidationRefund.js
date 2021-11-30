@@ -344,9 +344,7 @@ contract('FantomLiquidationManager', function([
       let remainingBalance = 10000 - Number(weiToEther(debtValue)) * 0.75;
       let currentBalance = await this.fantomFUSD.balanceOf(secondBidder);
 
-      expect(weiToEther(currentBalance) * 1).to.equal(
-        Number(remainingBalance.toFixed(4))
-      );
+      expect(weiToEther(currentBalance) * 1).to.equal(Number(remainingBalance));
     });
 
     it('the bidder2 should get 20% of the (3/4) wFTM collateral', async function() {
@@ -369,7 +367,7 @@ contract('FantomLiquidationManager', function([
       let newTotalSupply = weiToEther(await this.fantomFUSD.totalSupply());
 
       expect(Number(newTotalSupply)).to.equal(
-        Number((totalSupply - weiToEther(debtValue)).toFixed(3))
+        Number(totalSupply - weiToEther(debtValue))
       );
     });
   });
