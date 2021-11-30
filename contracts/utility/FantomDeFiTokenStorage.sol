@@ -123,7 +123,11 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     }
 
     // totalOf returns the value of current balance of specified account.
-    function totalOf(address _account, bool requireTradable) public view returns (uint256) {
+    function totalOf(address _account, bool requireTradable)
+        public
+        view
+        returns (uint256)
+    {
         return _totalOf(_account, address(0x0), 0, 0, requireTradable);
     }
 
@@ -132,7 +136,8 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     function totalOfInc(
         address _account,
         address _token,
-        uint256 _amount, bool requireTradable
+        uint256 _amount,
+        bool requireTradable
     ) external view returns (uint256 value) {
         // calculate the total with token balance adjusted up
         return _totalOf(_account, _token, _amount, 0, requireTradable);
@@ -143,7 +148,8 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     function totalOfDec(
         address _account,
         address _token,
-        uint256 _amount, bool requireTradable
+        uint256 _amount,
+        bool requireTradable
     ) external view returns (uint256 value) {
         // calculate the total with token balance adjusted down
         return _totalOf(_account, _token, 0, _amount, requireTradable);
@@ -173,24 +179,23 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
             // Make sure to stay on safe size with the _sub deduction, we don't
             // want to drop balance to sub-zero amount, that would freak out the SafeMath.
             if (_token == tokens[i]) {
-                uint256 adjustedBalance = balance[_account][tokens[i]].add(_add).sub(_sub, "token sub exceeds balance");
+                uint256 adjustedBalance = balance[_account][tokens[i]]
+                    .add(_add)
+                    .sub(_sub, "token sub exceeds balance");
                 // add adjusted token balance converted to value
                 // NOTE: this may revert on underflow if the _sub value exceeds balance,
                 // but it should never happen on normal protocol operations.
-                value = value.add(
-                    tokenValue(
-                        tokens[i],
-                        adjustedBalance
-                    )
-                );
+                value = value.add(tokenValue(tokens[i], adjustedBalance));
 
                 // we consumed the adjustment and can reset it
                 _add = 0;
                 _sub = 0;
             } else {
                 if (requireTradable) {
-                    if (addressProvider.getTokenRegistry().canTrade(tokens[i])) {
-                    // simply add the token balance converted to value as-is
+                    if (
+                        addressProvider.getTokenRegistry().canTrade(tokens[i])
+                    ) {
+                        // simply add the token balance converted to value as-is
                         value = value.add(
                             tokenValue(tokens[i], balance[_account][tokens[i]])
                         );
