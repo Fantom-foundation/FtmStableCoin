@@ -147,7 +147,8 @@ contract('FantomLiquidationManager', function([
       18,
       true,
       true,
-      false
+      false,
+      true
     );
 
     await this.fantomMintTokenRegistry.addToken(
@@ -157,7 +158,8 @@ contract('FantomLiquidationManager', function([
       18,
       true,
       false,
-      true
+      true,
+      false
     );
 
     await this.fantomFUSD.addMinter(this.fantomMint.address, { from: owner });

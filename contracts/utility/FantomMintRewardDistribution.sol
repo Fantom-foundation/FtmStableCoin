@@ -21,7 +21,10 @@ import "../modules/FantomMintRewardManager.sol";
 // NOTE: Unlocked rewards can be pushed into the distribution by anyone,
 // participants are motivated to do so to be able to gain
 // the rewards they earned.
-contract FantomMintRewardDistribution is Initializable, Ownable, FantomMintRewardManager
+contract FantomMintRewardDistribution is
+    Initializable,
+    Ownable,
+    FantomMintRewardManager
 {
     // define used libs
     using SafeMath for uint256;
@@ -62,7 +65,10 @@ contract FantomMintRewardDistribution is Initializable, Ownable, FantomMintRewar
     // ---------------------------------------------------------------------
 
     // initialize initializes the contract properly before the first use.
-    function initialize(address owner, address _addressProvider) public initializer {
+    function initialize(address owner, address _addressProvider)
+        public
+        initializer
+    {
         // remember the address provider for the other protocol contracts connection
         addressProvider = IFantomMintAddressProvider(_addressProvider);
 
@@ -186,7 +192,11 @@ contract FantomMintRewardDistribution is Initializable, Ownable, FantomMintRewar
 
     // principalBalanceOf returns the balance of principal token
     // which yield a reward share for this account.
-    function principalBalanceOf(address _account) public view returns (uint256) {
+    function principalBalanceOf(address _account)
+        public
+        view
+        returns (uint256)
+    {
         return addressProvider.getDebtPool().totalOf(_account, false);
     }
 
