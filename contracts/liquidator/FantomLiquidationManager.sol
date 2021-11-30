@@ -427,7 +427,7 @@ contract FantomLiquidationManager is
     );
 
     require(
-      collateralPool.totalOf(_targetAddress) > 0,
+      collateralPool.totalOf(_targetAddress, false) > 0,
       'The value of the collateral is 0'
     );
 

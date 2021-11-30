@@ -123,8 +123,8 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     }
 
     // totalOf returns the value of current balance of specified account.
-    function totalOf(address _account) public view returns (uint256) {
-        return _totalOf(_account, address(0x0), 0, 0);
+    function totalOf(address _account, bool requireTradable) public view returns (uint256) {
+        return _totalOf(_account, address(0x0), 0, 0, requireTradable);
     }
 
     // totalOfInc returns the value of current balance of an account
@@ -132,10 +132,10 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     function totalOfInc(
         address _account,
         address _token,
-        uint256 _amount
+        uint256 _amount, bool requireTradable
     ) external view returns (uint256 value) {
         // calculate the total with token balance adjusted up
-        return _totalOf(_account, _token, _amount, 0);
+        return _totalOf(_account, _token, _amount, 0, requireTradable);
     }
 
     // totalOfDec returns the value of current balance of an account
@@ -143,10 +143,10 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
     function totalOfDec(
         address _account,
         address _token,
-        uint256 _amount
+        uint256 _amount, bool requireTradable
     ) external view returns (uint256 value) {
         // calculate the total with token balance adjusted down
-        return _totalOf(_account, _token, 0, _amount);
+        return _totalOf(_account, _token, 0, _amount, requireTradable);
     }
 
     // balanceOf returns the balance of the given token on the given account.
@@ -164,7 +164,8 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
         address _account,
         address _token,
         uint256 _add,
-        uint256 _sub
+        uint256 _sub,
+        bool requireTradable
     ) internal view returns (uint256 value) {
         // loop all registered debt tokens
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -172,16 +173,14 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
             // Make sure to stay on safe size with the _sub deduction, we don't
             // want to drop balance to sub-zero amount, that would freak out the SafeMath.
             if (_token == tokens[i]) {
+                uint256 adjustedBalance = balance[_account][tokens[i]].add(_add).sub(_sub, "token sub exceeds balance");
                 // add adjusted token balance converted to value
                 // NOTE: this may revert on underflow if the _sub value exceeds balance,
                 // but it should never happen on normal protocol operations.
                 value = value.add(
                     tokenValue(
                         tokens[i],
-                        balance[_account][tokens[i]].add(_add).sub(
-                            _sub,
-                            "token sub exceeds balance"
-                        )
+                        adjustedBalance
                     )
                 );
 
@@ -189,10 +188,18 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
                 _add = 0;
                 _sub = 0;
             } else {
-                // simply add the token balance converted to value as-is
-                value = value.add(
-                    tokenValue(tokens[i], balance[_account][tokens[i]])
-                );
+                if (requireTradable) {
+                    if (addressProvider.getTokenRegistry().canTrade(tokens[i])) {
+                    // simply add the token balance converted to value as-is
+                        value = value.add(
+                            tokenValue(tokens[i], balance[_account][tokens[i]])
+                        );
+                    }
+                } else {
+                    value = value.add(
+                        tokenValue(tokens[i], balance[_account][tokens[i]])
+                    );
+                }
             }
         }
 
