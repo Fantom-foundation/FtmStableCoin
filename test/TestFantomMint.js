@@ -237,7 +237,7 @@ contract('FantomMint', function([
       await this.mockTokenTwo.mint(borrower, etherToWei(7500));
     });
 
-    it('should allow the borrower to deposit 5000 wFTM and 5000 xFTM', async function() {
+    it('should allow the borrower to deposit 7500 wFTM and 7500 xFTM', async function() {
       await this.mockTokenOne.approve(
         this.fantomMint.address,
         etherToWei(7500),
@@ -299,8 +299,8 @@ contract('FantomMint', function([
         30000
       );
 
-      // let debtOfAccount = await this.debtPool.totalOf(borrower);
-      // let collateralOfAccount = await this.collateralPool.totalOf(borrower);
+      // let debtOfAccount = await this.debtPool.totalOf(borrower, true);
+      // let collateralOfAccount = await this.collateralPool.totalOf(borrower, false);
 
       // console.log('maxToMint in ether: ', weiToEther(maxToMint) * 1);
       // console.log('current DEBT (debtValueOf): ', weiToEther(debtOfAccount));
@@ -356,15 +356,62 @@ contract('FantomMint', function([
         30000
       );
 
-      let debtOfAccount = await this.debtPool.totalOf(borrower);
-      let collateralOfAccount = await this.collateralPool.totalOf(borrower);
+      expect(weiToEther(maxToMint)).to.be.equal('0');
+    });
 
-      console.log('maxToMint in ether: ', weiToEther(maxToMint) * 1);
-      console.log('current DEBT (debtValueOf): ', weiToEther(debtOfAccount));
-      console.log(
-        'current Collateral (collateralValueOf): ',
-        weiToEther(collateralOfAccount)
+    it('should allow the borrower to withdraw the collateral (non-tradable)', async function() {
+      await this.fantomMint.mustWithdraw(
+        this.mockTokenNT.address,
+        etherToWei(5000),
+        { from: borrower }
       );
+
+      let balance = await this.mockTokenNT.balanceOf(borrower);
+
+      expect(weiToEther(balance)).to.be.equal('5000');
+    });
+
+    it('should allow borrower to repay the debt', async function() {
+      let balance = await this.debtPool.balanceOf(
+        borrower,
+        this.fantomFUSD.address
+      );
+
+      expect(weiToEther(balance) * 1).to.be.equal(5000);
+
+      // Actual fUSD balance is less than the above balance as it doens't include the fee
+      let tokenBalance = await this.fantomFUSD.balanceOf(borrower);
+
+      await this.fantomFUSD.approve(
+        this.fantomMint.address,
+        etherToWei(1 + weiToEther(balance)),
+        { from: borrower }
+      );
+
+      let _repaidEvent = await this.fantomMint.mustRepayMax(
+        this.fantomFUSD.address,
+        { from: borrower }
+      );
+
+      expectEvent(_repaidEvent, 'Repaid', {
+        token: this.fantomFUSD.address,
+        user: borrower,
+        amount: tokenBalance
+      });
+    });
+
+    it('should allow the borrower to withdraw the collateral', async function() {
+      await this.fantomMint.mustWithdraw(
+        this.mockTokenOne.address,
+        etherToWei(5000),
+        { from: borrower }
+      );
+    });
+
+    it('the borrower should now have 5000 wFTM again', async function() {
+      let balance = await this.mockTokenOne.balanceOf(borrower);
+
+      expect(weiToEther(balance)).to.be.equal('5000');
     });
   });
 });
