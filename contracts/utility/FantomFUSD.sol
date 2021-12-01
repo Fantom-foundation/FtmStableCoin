@@ -24,8 +24,7 @@ contract FantomFUSD is
      * these values are immutable: they can only be set once during
      * initialization.
      */
-    function init(address owner) public initializer {
-        //function initialize(address owner) public initializer {
+    function initialize(address owner) public initializer {
         // initialize the token
         ERC20Detailed.initialize("Fantom USD", "FUSD", 18);
 

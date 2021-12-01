@@ -80,8 +80,7 @@ contract('Unit Test for FantomLiquidationManager', function([
     );
 
     this.fantomFUSD = await FantomFUSD.new({ from: owner });
-    //await this.fantomFUSD.initialize(owner);
-    await this.fantomFUSD.init(owner);
+    await this.fantomFUSD.initialize(owner);
 
     this.fantomMintRewardDistribution = await FantomMintRewardDistribution.new({
       from: owner
