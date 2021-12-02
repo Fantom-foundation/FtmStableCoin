@@ -191,16 +191,10 @@ contract FantomDeFiTokenStorage is Initializable, IFantomDeFiTokenStorage {
                 _add = 0;
                 _sub = 0;
             } else {
-                if (requireTradable) {
-                    if (
-                        addressProvider.getTokenRegistry().canTrade(tokens[i])
-                    ) {
-                        // simply add the token balance converted to value as-is
-                        value = value.add(
-                            tokenValue(tokens[i], balance[_account][tokens[i]])
-                        );
-                    }
-                } else {
+                if (
+                    !requireTradable ||
+                    addressProvider.getTokenRegistry().canTrade(tokens[i])
+                ) {
                     value = value.add(
                         tokenValue(tokens[i], balance[_account][tokens[i]])
                     );
