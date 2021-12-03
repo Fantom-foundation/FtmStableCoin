@@ -11,19 +11,23 @@ import "../interfaces/IFantomMintRewardManager.sol";
 import "../interfaces/IPriceOracleProxy.sol";
 import "../interfaces/IERC20Detailed.sol";
 import "../interfaces/IFantomMintAddressProvider.sol";
+import "../FantomMint.sol";
 
 /**
-* This provides addresses to deployed FMint modules
-* and related contracts cooperating on the FMint protocol.
-* It's used to connects different modules to make the whole
-* FMint protocol live and work.
-*
-* version 0.1.0
-* license MIT
-* author Fantom Foundation, Jiri Malek
-*/
-contract FantomMintAddressProvider is Initializable, Ownable, IFantomMintAddressProvider {
-
+ * This provides addresses to deployed FMint modules
+ * and related contracts cooperating on the FMint protocol.
+ * It's used to connects different modules to make the whole
+ * FMint protocol live and work.
+ *
+ * version 0.1.0
+ * license MIT
+ * author Fantom Foundation, Jiri Malek
+ */
+contract FantomMintAddressProvider is
+    Initializable,
+    Ownable,
+    IFantomMintAddressProvider
+{
     // ----------------------------------------------
     // Module identifiers used by the address storage
     // ----------------------------------------------
@@ -44,7 +48,6 @@ contract FantomMintAddressProvider is Initializable, Ownable, IFantomMintAddress
     // _addressPool stores addresses to the different modules
     // identified their common names.
     mapping(bytes32 => address) private _addressPool;
-
 
     // LiquidationManager event is emitted when
     // a new liquidation address is set.
@@ -88,25 +91,25 @@ contract FantomMintAddressProvider is Initializable, Ownable, IFantomMintAddress
     // --------------------------------------------
 
     /**
-    * getAddress returns the address associated with the given
-    * module identifier. If the identifier is not recognized,
-    * the function returns zero address instead.
-    *
-    * @param _id The common name of the module contract.
-    * @return The address of the deployed module.
-    */
+     * getAddress returns the address associated with the given
+     * module identifier. If the identifier is not recognized,
+     * the function returns zero address instead.
+     *
+     * @param _id The common name of the module contract.
+     * @return The address of the deployed module.
+     */
     function getAddress(bytes32 _id) public view returns (address) {
         return _addressPool[_id];
     }
 
     /**
-    * setAddress modifies the active address of the given module,
-    * identified by it's common name, to the new address.
-    *
-    * @param _id The common name of the module contract.
-    * @param _addr The new address to be used for the module.
-    * @return {void}
-    */
+     * setAddress modifies the active address of the given module,
+     * identified by it's common name, to the new address.
+     *
+     * @param _id The common name of the module contract.
+     * @param _addr The new address to be used for the module.
+     * @return {void}
+     */
     function setAddress(bytes32 _id, address _addr) internal {
         _addressPool[_id] = _addr;
     }
@@ -157,7 +160,11 @@ contract FantomMintAddressProvider is Initializable, Ownable, IFantomMintAddress
      * getRewardDistribution returns the address
      * of the reward distribution contract.
      */
-    function getRewardDistribution() public view returns (IFantomMintRewardManager) {
+    function getRewardDistribution()
+        public
+        view
+        returns (IFantomMintRewardManager)
+    {
         return IFantomMintRewardManager(getAddress(MOD_REWARD_DISTRIBUTION));
     }
 
@@ -198,7 +205,7 @@ contract FantomMintAddressProvider is Initializable, Ownable, IFantomMintAddress
         return (getAddress(MOD_LIQUIDATION_MANAGER));
     }
 
-        /**
+    /**
      * setFantomMint modifies the address of the Fantom fMint contract.
      */
     function setFantomLiquidationManager(address _addr) public onlyOwner {
@@ -212,8 +219,11 @@ contract FantomMintAddressProvider is Initializable, Ownable, IFantomMintAddress
     /**
      * getFantomMint returns the address of the Fantom fMint contract.
      */
-    function getFantomMint() public view returns (IFantomMintBalanceGuard) {
+    /*function getFantomMint() public view returns (IFantomMintBalanceGuard) {
         return IFantomMintBalanceGuard(getAddress(MOD_FANTOM_MINT));
+    }*/
+    function getFantomMint() public view returns (FantomMint) {
+        return FantomMint(getAddress(MOD_FANTOM_MINT));
     }
 
     /**

@@ -5,7 +5,7 @@
 async function main(network) {
   console.log('network: ', network.name);
 
-  const [deployer] = await ethers.getSigners();
+  const [deployer, borrower, bidder] = await ethers.getSigners();
   const deployerAddress = await deployer.getAddress();
   console.log(`Deployer's address: `, deployerAddress);
 
@@ -40,18 +40,34 @@ async function main(network) {
     deployerAddress,
     fantomMintAddressProvider.address
   );
+
   ///
 
-  /* ///  TODO:  needs ProxyAdmin
-  const FantomLiquidationManager = await ethers.getContractFactory(
+  ///
+  const FantomProxyAdmin = await ethers.getContractFactory('FantomProxyAdmin');
+  const fantomProxyAdmin = await FantomProxyAdmin.deploy();
+  await fantomProxyAdmin.deployed();
+  ///
+
+  let PROXY_ADMIN_ADDRESS;
+  switch (network.name) {
+    case 'mainnet':
+      PROXY_ADMIN_ADDRESS = '0x???'; //TODO: get the correct one
+      break;
+    default:
+      PROXY_ADMIN_ADDRESS = fantomProxyAdmin.address;
+      break;
+  }
+
+  const FantomLiquidationManagerImpl = await ethers.getContractFactory(
     'FantomLiquidationManager'
   );
-  const fantomLiquidationManagerImpl = await FantomLiquidationManager.deploy();
+  const fantomLiquidationManagerImpl = await FantomLiquidationManagerImpl.deploy();
   await fantomLiquidationManagerImpl.deployed();
   console.log(
-    'FantomLiquidationManager Implemaentaion deployed at',
+    'FantomLiquidationManager Implementation deployed at',
     fantomLiquidationManagerImpl.address
-  );  
+  );
   ///
 
   ///
@@ -60,7 +76,7 @@ async function main(network) {
   );
   const fantomLiquidationManagerProxy = await FantomLiquidationManagerProxy.deploy(
     fantomLiquidationManagerImpl.address,
-    deployerAddress,
+    PROXY_ADMIN_ADDRESS,
     []
   );
   await fantomLiquidationManagerProxy.deployed();
@@ -68,15 +84,17 @@ async function main(network) {
     'FantomLiquidationManagerProxy deployed at',
     fantomLiquidationManagerProxy.address
   );
-  const fantomLiquidationManager = await ethers.getContractAt(
+  const fantomLiquidationManagerProxy2 = await ethers.getContractAt(
     'FantomLiquidationManager',
     fantomLiquidationManagerProxy.address
   );
-  await fantomLiquidationManager.initialize(
-    PROXY_ADMIN_ADDRESS,
+  //console.log(fantomLiquidationManagerProxy2.address);
+  await fantomLiquidationManagerProxy2.initialize(
+    //await fantomLiquidationManagerProxy.initialize(
+    deployerAddress,
     fantomMintAddressProvider.address
   );
-  /// */
+  ///
 
   ///
   const FantomMint = await ethers.getContractFactory('FantomMint');
@@ -132,7 +150,8 @@ async function main(network) {
   await fantomFUSD.deployed();
   console.log('FantomFUSD deployed at', fantomFUSD.address);
   //await fantomFUSD.initialize(deployerAddress); //why not working??
-  //await fantomFUSD.init(deployerAddress); // if initialize in FantomFUSD is renamed to another name such as init, it will work
+  await fantomFUSD.init(deployerAddress); // if initialize in FantomFUSD is renamed to another name such as init, it will work
+  await fantomFUSD.addMinter(fantomMint.address); //TODO: FantomFUSD needs to  run the initialize function first
   ///
 
   ///
@@ -154,11 +173,13 @@ async function main(network) {
   ///
   let wFTMAddress;
   let priceOracleProxyAddress;
+  let mockToken2;
 
-  if (network.name === 'localhost') {
+  if (network.name === 'localhost' || network.name === 'testnet') {
     const MockToken = await ethers.getContractFactory('MockToken');
     const mockToken = await MockToken.deploy();
     await mockToken.deployed();
+    mockToken2 = mockToken;
     console.log('MockToken deployed at', mockToken.address);
     wFTMAddress = mockToken.address;
     await mockToken.initialize('wFTM', 'wFTM', 18);
@@ -168,14 +189,14 @@ async function main(network) {
     case 'mainnet':
       wFTMAddress = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
       break;
-    case 'testnet':
-      wFTMAddress = '0xf1277d1ed8ad466beddf92ef448a132661956621';
-      break;
+    //case 'testnet':
+    //  wFTMAddress = '0xf1277d1ed8ad466beddf92ef448a132661956621';
+    //  break;
     default:
       break;
   }
 
-  if (network.name === 'localhost') {
+  if (network.name === 'localhost' || network.name === 'testnet') {
     const MockPriceOracleProxy = await ethers.getContractFactory(
       'MockPriceOracleProxy'
     );
@@ -188,6 +209,7 @@ async function main(network) {
     priceOracleProxyAddress = mockPriceOracleProxy.address;
 
     // set the initial value; 1 wFTM = 1 USD; 1 fUSD = 1 USD
+    console.log('Setting the initial price of FUSD and wFTM...');
     await mockPriceOracleProxy.setPrice(wFTMAddress, etherToWei(1).toString());
     await mockPriceOracleProxy.setPrice(
       fantomFUSD.address,
@@ -198,9 +220,9 @@ async function main(network) {
     case 'mainnet':
       priceOracleProxyAddress = '0x????'; //TODO: get the correct address
       break;
-    case 'testnet':
-      priceOracleProxyAddress = '0x????'; //TODO: get the correct address
-      break;
+    //case 'testnet':
+    //priceOracleProxyAddress = '0x????'; //TODO: get the correct address
+    //break;
     default:
       break;
   }
@@ -208,6 +230,7 @@ async function main(network) {
   ///
 
   ///
+  console.log('Address Provider settings...');
   await fantomMintAddressProvider.setFantomMint(fantomMint.address);
   await fantomMintAddressProvider.setCollateralPool(collateralPool.address);
   await fantomMintAddressProvider.setDebtPool(debtPool.address);
@@ -221,6 +244,8 @@ async function main(network) {
   await fantomMintAddressProvider.setFantomLiquidationManager(
     fantomLiquidationManager.address
   );
+
+  console.log('Register Token...');
   await fantomMintTokenRegistry.addToken(
     wFTMAddress,
     '',
@@ -231,7 +256,7 @@ async function main(network) {
     false
   );
   // TODO: the FantomFUSD needs to run the initialize function first
-  /* await fantomMintTokenRegistry.addToken(
+  await fantomMintTokenRegistry.addToken(
     fantomFUSD.address,
     '',
     priceOracleProxyAddress,
@@ -239,10 +264,9 @@ async function main(network) {
     true,
     false,
     true
-  ); */
+  );
 
-  //await fantomFUSD.addMinter(fantomMint.address); //TODO: FantomFUSD needs to run the initialize function first
-
+  console.log('Liquidation Manager setting...');
   await fantomLiquidationManager.updateFantomMintContractAddress(
     fantomMint.address
   );
@@ -252,14 +276,42 @@ async function main(network) {
     case 'mainnet':
       fantomFeeVault = '0x????'; //TODO get the correct address
       break;
-    case 'testnet':
-      fantomFeeVault = '0x????'; //TODO get the correct address
-      break;
+    //case 'testnet':
+    //fantomFeeVault = '0x????'; //TODO get the correct address
+    //break;
     default:
       fantomFeeVault = deployerAddress;
       break;
   }
   await fantomLiquidationManager.updateFantomFeeVault(fantomFeeVault);
+
+  console.log('Finished!');
+
+  if (network.name === 'localhost' || network.name === 'testnet') {
+    await fantomFUSD.mint(
+      await bidder.getAddress(),
+      etherToWei(9999).toString()
+    );
+
+    await mockToken2.mint(
+      await borrower.getAddress(),
+      etherToWei(9999).toString()
+    );
+
+    await mockToken2
+      .connect(borrower)
+      .approve(fantomMint.address, etherToWei(9999).toString());
+
+    await fantomMint
+      .connect(borrower)
+      .mustDeposit(mockToken2.address, etherToWei(9999).toString());
+    await fantomMint.connect(borrower).mustMintMax(fantomFUSD.address, 32000);
+  }
+
+  const collateralIsEligible = await fantomLiquidationManager.collateralIsEligible(
+    await borrower.getAddress()
+  );
+  console.log('collateralIsEligible:', collateralIsEligible);
   ///
 }
 

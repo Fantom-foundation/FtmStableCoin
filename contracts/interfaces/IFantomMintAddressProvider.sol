@@ -7,6 +7,7 @@ import "../interfaces/IFantomMintTokenRegistry.sol";
 import "../interfaces/IFantomMintRewardManager.sol";
 import "../interfaces/IPriceOracleProxy.sol";
 import "./IERC20Detailed.sol";
+import "../FantomMint.sol";
 
 /**
  * This interface defines available functions of the FMint Address Provider contract.
@@ -19,53 +20,63 @@ import "./IERC20Detailed.sol";
  * gas on repeated access.
  */
 interface IFantomMintAddressProvider {
-	// getFantomLiquidationManager returns the address of FantomLiquidationManager contract.
-	function getFantomLiquidationManager() external view returns (address);
+    // getFantomLiquidationManager returns the address of FantomLiquidationManager contract.
+    function getFantomLiquidationManager() external view returns (address);
 
-	// setFantomLiquidationManager modifies the address of the FantomLiquidationManager contract.
-	function setFantomLiquidationManager(address _addr) external;
-	
-	// getFantomMint returns the address of the Fantom fMint contract.
-	function getFantomMint() external view returns (IFantomMintBalanceGuard);
+    // setFantomLiquidationManager modifies the address of the FantomLiquidationManager contract.
+    function setFantomLiquidationManager(address _addr) external;
 
-	// setFantomMint modifies the address of the Fantom fMint contract.
-	function setFantomMint(address _addr) external;
+    // getFantomMint returns the address of the Fantom fMint contract.
+    //function getFantomMint() external view returns (IFantomMintBalanceGuard);
+    function getFantomMint() external view returns (FantomMint);
 
-	// getTokenRegistry returns the address of the token registry contract.
-	function getTokenRegistry() external view returns (IFantomMintTokenRegistry);
+    // setFantomMint modifies the address of the Fantom fMint contract.
+    function setFantomMint(address _addr) external;
 
-	// setTokenRegistry modifies the address of the token registry contract.
-	function setTokenRegistry(address _addr) external;
+    // getTokenRegistry returns the address of the token registry contract.
+    function getTokenRegistry()
+        external
+        view
+        returns (IFantomMintTokenRegistry);
 
-	// getCollateralPool returns the address of the collateral pool contract.
-	function getCollateralPool() external view returns (IFantomDeFiTokenStorage);
+    // setTokenRegistry modifies the address of the token registry contract.
+    function setTokenRegistry(address _addr) external;
 
-	// setCollateralPool modifies the address of the collateral pool contract.
-	function setCollateralPool(address _addr) external;
+    // getCollateralPool returns the address of the collateral pool contract.
+    function getCollateralPool()
+        external
+        view
+        returns (IFantomDeFiTokenStorage);
 
-	// getDebtPool returns the address of the debt pool contract.
-	function getDebtPool() external view returns (IFantomDeFiTokenStorage);
+    // setCollateralPool modifies the address of the collateral pool contract.
+    function setCollateralPool(address _addr) external;
 
-	// setDebtPool modifies the address of the debt pool contract.
-	function setDebtPool(address _addr) external;
+    // getDebtPool returns the address of the debt pool contract.
+    function getDebtPool() external view returns (IFantomDeFiTokenStorage);
 
-	// getRewardDistribution returns the address of the reward distribution contract.
-	function getRewardDistribution() external view returns (IFantomMintRewardManager);
+    // setDebtPool modifies the address of the debt pool contract.
+    function setDebtPool(address _addr) external;
 
-	// setRewardDistribution modifies the address of the reward distribution contract.
-	function setRewardDistribution(address _addr) external;
+    // getRewardDistribution returns the address of the reward distribution contract.
+    function getRewardDistribution()
+        external
+        view
+        returns (IFantomMintRewardManager);
 
-	// getPriceOracleProxy returns the address of the price oracle aggregate.
-	function getPriceOracleProxy() external view returns (IPriceOracleProxy);
+    // setRewardDistribution modifies the address of the reward distribution contract.
+    function setRewardDistribution(address _addr) external;
 
-	// setPriceOracleProxy modifies the address of the price oracle aggregate.
-	function setPriceOracleProxy(address _addr) external;
+    // getPriceOracleProxy returns the address of the price oracle aggregate.
+    function getPriceOracleProxy() external view returns (IPriceOracleProxy);
 
-	// getRewardToken returns the address of the reward token ERC20 contract.
-	function getRewardToken() external view returns (ERC20);
+    // setPriceOracleProxy modifies the address of the price oracle aggregate.
+    function setPriceOracleProxy(address _addr) external;
 
-	// setRewardToken modifies the address of the reward token ERC20 contract.
-	function setRewardToken(address _addr) external;
+    // getRewardToken returns the address of the reward token ERC20 contract.
+    function getRewardToken() external view returns (ERC20);
 
-	function getAddress(bytes32 _id) external view returns (address);
+    // setRewardToken modifies the address of the reward token ERC20 contract.
+    function setRewardToken(address _addr) external;
+
+    function getAddress(bytes32 _id) external view returns (address);
 }

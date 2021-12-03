@@ -11,8 +11,14 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Paus
  * tokens and those that they have an allowance for, in a way that can be
  * recognized off-chain (via event analysis).
  */
-contract FantomFUSD is Initializable, ERC20, ERC20Detailed, ERC20Mintable, ERC20Burnable, ERC20Pausable {
-
+contract FantomFUSD is
+    Initializable,
+    ERC20,
+    ERC20Detailed,
+    ERC20Mintable,
+    ERC20Burnable,
+    ERC20Pausable
+{
     /**
      * @dev Sets the values for `name`, `symbol`, and `decimals`. All three of
      * these values are immutable: they can only be set once during
