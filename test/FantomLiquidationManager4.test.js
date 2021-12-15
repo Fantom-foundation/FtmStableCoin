@@ -5,7 +5,7 @@ const {
   constants,
   expectEvent,
   expectRevert,
-  time
+  time,
 } = require('@openzeppelin/test-helpers');
 const { ZERO_ADDRESS } = constants;
 
@@ -21,7 +21,7 @@ const FantomMintAddressProvider = artifacts.require(
   'FantomMintAddressProvider'
 );
 const FantomMintRewardDistribution = artifacts.require(
-  'FantomMintRewardDistribution'
+  'MockFantomMintRewardDistribution'
 );
 const FantomFUSD = artifacts.require('FantomFUSD');
 const MockToken = artifacts.require('MockToken');
@@ -42,17 +42,17 @@ contract('Unit Test for FantomLiquidationManager', function([
   borrower,
   bidder1,
   bidder2,
-  fantomFeeVault
+  fantomFeeVault,
 ]) {
   beforeEach(async function() {
     /** all the necessary setup  */
     this.fantomMintAddressProvider = await FantomMintAddressProvider.new({
-      from: owner
+      from: owner,
     });
     await this.fantomMintAddressProvider.initialize(owner);
 
     this.fantomLiquidationManager = await FantomLiquidationManager.new({
-      from: owner
+      from: owner,
     });
     await this.fantomLiquidationManager.initialize(
       owner,
@@ -86,7 +86,7 @@ contract('Unit Test for FantomLiquidationManager', function([
     await this.fantomFUSD.initialize(owner);
 
     this.fantomMintRewardDistribution = await FantomMintRewardDistribution.new({
-      from: owner
+      from: owner,
     });
     await this.fantomMintRewardDistribution.initialize(
       owner,
@@ -110,7 +110,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       { from: owner }
     );
     await this.fantomMintAddressProvider.setDebtPool(this.debtPool.address, {
-      from: owner
+      from: owner,
     });
     await this.fantomMintAddressProvider.setTokenRegistry(
       this.fantomMintTokenRegistry.address,
@@ -184,7 +184,7 @@ contract('Unit Test for FantomLiquidationManager', function([
     await this.fantomLiquidationManager.addAdmin(admin, { from: owner });
 
     await this.fantomLiquidationManager.updateFantomFeeVault(fantomFeeVault, {
-      from: owner
+      from: owner,
     });
 
     await this.fantomLiquidationManager.updateInitiatorBonus(etherToWei(0.5));
@@ -214,7 +214,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Borrower approves 9999 wFTM to FantomMint contract`);
       await this.mockToken.approve(this.fantomMint.address, etherToWei(9999), {
-        from: borrower
+        from: borrower,
       });
 
       console.log(`
@@ -233,7 +233,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Mint the maximum amount of fUSD for the borrower`);
       await this.fantomMint.mustMintMax(this.fantomFUSD.address, 32000, {
-        from: borrower
+        from: borrower,
       });
       console.log(`
             *Now borrower should have fUSD between 0 and 3333`);
@@ -283,7 +283,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Borrower approves 9999 wFTM to FantomMint contract`);
       await this.mockToken.approve(this.fantomMint.address, etherToWei(9999), {
-        from: borrower
+        from: borrower,
       });
 
       console.log(`
@@ -302,7 +302,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Mint the maximum amount of fUSD for the borrower`);
       await this.fantomMint.mustMintMax(this.fantomFUSD.address, 32000, {
-        from: borrower
+        from: borrower,
       });
       console.log(`
             *Now borrower should have fUSD between 0 and 3333`);
@@ -334,7 +334,7 @@ contract('Unit Test for FantomLiquidationManager', function([
             *Event AuctionStarted should be emitted with correct values: nonce = 1, user = borrower`);
       expectEvent(result, 'AuctionStarted', {
         nonce: new BN('1'),
-        user: borrower
+        user: borrower,
       });
 
       console.log(`
@@ -359,7 +359,7 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       await this.fantomLiquidationManager.bidAuction(1, new BN('100000000'), {
         from: borrower,
-        value: etherToWei(0.5)
+        value: etherToWei(0.5),
       });
 
       console.log(`
@@ -393,7 +393,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Borrower approves 9999 wFTM to FantomMint contract`);
       await this.mockToken.approve(this.fantomMint.address, etherToWei(9999), {
-        from: borrower
+        from: borrower,
       });
 
       console.log(`
@@ -412,7 +412,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             Mint the maximum amount of fUSD for the borrower`);
       await this.fantomMint.mustMintMax(this.fantomFUSD.address, 32000, {
-        from: borrower
+        from: borrower,
       });
       console.log(`
             *Now borrower should have fUSD between 0 and 3333`);
@@ -444,7 +444,7 @@ contract('Unit Test for FantomLiquidationManager', function([
             *Event AuctionStarted should be emitted with correct values: nonce = 1, user = borrower`);
       expectEvent(result, 'AuctionStarted', {
         nonce: new BN('1'),
-        user: borrower
+        user: borrower,
       });
 
       console.log(`
@@ -473,7 +473,7 @@ contract('Unit Test for FantomLiquidationManager', function([
 
       await this.fantomLiquidationManager.bidAuction(1, new BN('100000000'), {
         from: borrower,
-        value: etherToWei(0.5)
+        value: etherToWei(0.5),
       });
 
       console.log(`
@@ -487,6 +487,100 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`
             The amount of fUSD that borrower 
             has after bidding his own collateral: ${weiToEther(balance)}`);
+    });
+
+    it('Scenario 13', async function() {
+      console.log(`
+            Scenario 13:
+            Borrower approves and deposits 9999 wFTM, 
+            Then mints possible 1000,
+            He/She should get some rewards as the collateral is more than 500%`);
+
+      console.log(`
+            Set the reward token, reward rate etc`);
+      this.rewardToken = await MockToken.new({ from: owner });
+      await this.rewardToken.initialize('rFTM', 'rFTM', 18);
+      await this.fantomMintAddressProvider.setRewardToken(
+        this.rewardToken.address
+      );
+      await this.mockPriceOracleProxy.setPrice(
+        this.rewardToken.address,
+        etherToWei(0.05)
+      );
+      await this.fantomMintRewardDistribution.rewardUpdateRate(10);
+
+      console.log(`
+            Mint 9999 wFTMs for the borrower so he/she can borrow some fUSD`);
+      await this.mockToken.mint(borrower, etherToWei(9999));
+
+      console.log(`
+            Borrower approves 9999 wFTM to FantomMint contract`);
+      await this.mockToken.approve(this.fantomMint.address, etherToWei(9999), {
+        from: borrower,
+      });
+
+      console.log(`
+            Borrower deposits all his/her 9999 wFTMs`);
+      await this.fantomMint.mustDeposit(
+        this.mockToken.address,
+        etherToWei(9999),
+        { from: borrower }
+      );
+
+      console.log(`
+            *Now the borrower should have 0 wFTM`);
+      let balance = await this.mockToken.balanceOf(borrower);
+      expect(balance).to.be.bignumber.equal('0');
+
+      console.log(`
+            Borrower mints 1000 fUSDs`);
+      let result = await this.fantomMint.mustMint(
+        this.fantomFUSD.address,
+        etherToWei(1000),
+        { from: borrower }
+      );
+
+      let rewardIsEligible = await this.fantomMintRewardDistribution.rewardIsEligible(
+        borrower
+      );
+      console.log(`rewardIsEligible: ${rewardIsEligible}`);
+
+      let rewardCanClaim = await this.fantomMintRewardDistribution.rewardCanClaim(
+        borrower
+      );
+      console.log(`rewardCanClaim: ${rewardCanClaim}`);
+
+      //await this.fantomMintRewardDistribution.mustRewardClaim({
+      //  from: borrower,
+      //});
+
+      await this.fantomMintRewardDistribution.rewardPush();
+      let rewardRate = await this.fantomMintRewardDistribution.rewardRate();
+      let rewardPerToken = await this.fantomMintRewardDistribution.rewardPerToken();
+      let rewardEarned = await this.fantomMintRewardDistribution.rewardEarned(
+        borrower
+      );
+
+      console.log(`rewardRate: ${rewardRate.toString()}`);
+      console.log(`rewardPerToken: ${rewardPerToken.toString()}`);
+      console.log(`rewardEarned: ${rewardEarned.toString()}`);
+
+      await this.fantomMintRewardDistribution.increaseTime(86400);
+
+      await this.fantomMintRewardDistribution.rewardPush();
+      rewardRate = await this.fantomMintRewardDistribution.rewardRate();
+      rewardPerToken = await this.fantomMintRewardDistribution.rewardPerToken();
+      rewardEarned = await this.fantomMintRewardDistribution.rewardEarned(
+        borrower
+      );
+
+      console.log(`rewardRate: ${rewardRate.toString()}`);
+      console.log(`rewardPerToken: ${rewardPerToken.toString()}`);
+      console.log(`rewardEarned: ${rewardEarned.toString()}`);
+
+      //await this.fantomMintRewardDistribution.mustRewardClaim({
+      //  from: borrower,
+      //});
     });
   });
 });
