@@ -566,6 +566,7 @@ contract('Unit Test for FantomLiquidationManager', function([
       console.log(`rewardEarned: ${rewardEarned.toString()}`);
 
       await this.fantomMintRewardDistribution.increaseTime(86400);
+      //await this.fantomMintRewardDistribution.mustRewardPush();
 
       await this.fantomMintRewardDistribution.rewardPush();
       rewardRate = await this.fantomMintRewardDistribution.rewardRate();
